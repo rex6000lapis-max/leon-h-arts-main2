@@ -144,7 +144,7 @@
 
     <script type="text/babel">
         // Получаем глобальные переменные, предоставленные Canvas
-        const { useState, useEffect, useCallback, useMemo, useRef } = React;
+        const {useState, useEffect, useCallback, useMemo, useRef , useLayoutEffect} = React;
         const { initializeApp, getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged, getFirestore, doc, onSnapshot, collection, query, addDoc, updateDoc, arrayUnion, serverTimestamp } = window;
 
         // --- Встроенные React SVG компоненты (замена lucide-react) ---
