@@ -260,12 +260,12 @@ ${e.message}`
         const MAX_ROW_HEIGHT_MULTIPLIER = 1.5;
 // --- КОМПОНЕНТ: Модальное окно для увеличенного изображения ---
         const ImageModal = ({ image, onClose, onSaveCaption, albumId, onNext, onPrev, isAdmin }) => {
-            if (!image |
+             if (!image ||
 
-| image.type === 'divider') return null;
-const [caption, setCaption] = useState(image.caption |
-
-| '');
+  image.type === 'divider') return null;
+  const [caption, setCaption] = useState(image.caption ||
+ 
+  '');
             const = useState(false);
             const [isEditPanelOpen, setIsEditPanelOpen] = useState(false);
 useEffect(() => {
