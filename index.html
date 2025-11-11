@@ -410,40 +410,33 @@
 
         // Главный компонент приложения
         const App = () => {
-            // === FIX: Сохранение позиции прокрутки ===
+            // === УЛУЧШЕННАЯ СИСТЕМА СОХРАНЕНИЯ ПОЗИЦИИ ПРОКРУТКИ ===
             const scrollPosition = useRef(0);
+            const shouldRestoreScroll = useRef(false);
 
             const saveScrollPosition = () => {
                 scrollPosition.current = window.scrollY || document.documentElement.scrollTop;
+                shouldRestoreScroll.current = true;
+                console.log('Scroll position saved:', scrollPosition.current);
             };
 
             const restoreScrollPosition = () => {
-                if (scrollPosition.current) {
-                    requestAnimationFrame(() => {
-                        setTimeout(() => {
-                            try {
-                                window.scrollTo({ 
-                                    top: scrollPosition.current, 
-                                    behavior: 'auto' 
-                                });
-                            } catch (e) {
-                                window.scrollTo(0, scrollPosition.current);
-                            }
-                        }, 10);
-                    });
+                if (shouldRestoreScroll.current && scrollPosition.current > 0) {
+                    console.log('Restoring scroll to:', scrollPosition.current);
+                    setTimeout(() => {
+                        window.scrollTo({
+                            top: scrollPosition.current,
+                            behavior: 'auto'
+                        });
+                        shouldRestoreScroll.current = false;
+                    }, 100);
                 }
             };
 
-            // Восстанавливаем позицию после рендера
+            // Восстанавливаем позицию после любых изменений состояния
             useEffect(() => {
                 restoreScrollPosition();
-            }, [albums, selectedAlbum, enlargedImage, isDeleteMode, isReorderMode]);
-
-            // Восстанавливаем позицию после изменений в layout
-            useLayoutEffect(() => {
-                restoreScrollPosition();
-            }, [selectedAlbum, enlargedImage, isDeleteMode, isReorderMode]);
-            // === Конец фикса прокрутки ===
+            });
 
             // Используем '|| false' для authReady, чтобы убедиться, что состояние определено
             const [authReady, setAuthReady] = useState(false);
@@ -542,12 +535,14 @@
             // Функция для открытия модала переименования
             const handleOpenRenameModal = useCallback((album) => {
                 if (!isAdmin) return;
+                saveScrollPosition();
                 setAlbumToRename(album);
                 setIsRenameModalOpen(true);
             }, [isAdmin]);
 
             // Функция для закрытия модала переименования
             const handleCloseRenameModal = useCallback(() => {
+                saveScrollPosition();
                 setIsRenameModalOpen(false);
                 setAlbumToRename(null);
             }, []);
@@ -759,6 +754,7 @@
             
             // **ОБНОВЛЕНИЕ ПОДПИСИ ФОТОГРАФИИ**
             const updatePhotoCaption = async (albumId, photoTimestamp, newCaption) => {
+                saveScrollPosition();
                 if (!isAdmin) { // ! Проверка Admin
                     alertUser('Ошибка доступа', 'Вы должны быть Администратором для редактирования подписей.');
                     return;
