@@ -406,10 +406,12 @@
         const App = () => {
 
   // === Scroll Position Fix ===
-  const scrollPosition = React.useRef(0);
-  const saveScrollPosition = React.useCallback(() => {
-    scrollPosition.current = window.scrollY || document.documentElement.scrollTop || 0;
-  }, []);
+      // --- 🧭 НОВОЕ: сохранение и восстановление позиции прокрутки ---
+    const scrollPosition = useRef(0);
+
+    const saveScrollPosition = () => {
+        scrollPosition.current = window.scrollY || document.documentElement.scrollTop;
+    };
 
   React.useLayoutEffect(() => {
     if (!scrollPosition.current) return;
@@ -471,12 +473,7 @@
             
             const [enlargedImage, setEnlargedImage] = useState(null); 
 
-    // --- 🧭 НОВОЕ: сохранение и восстановление позиции прокрутки ---
-    const scrollPosition = useRef(0);
 
-    const saveScrollPosition = () => {
-        scrollPosition.current = window.scrollY || document.documentElement.scrollTop;
-    };
 
     useLayoutEffect(() => {
         if (scrollPosition.current) {
