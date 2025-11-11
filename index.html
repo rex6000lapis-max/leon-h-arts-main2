@@ -246,7 +246,7 @@
 
 
         // --- КОМПОНЕНТ: Модальное окно для увеличенного изображения ---
-        const ImageModal = ({ image, onClose, onSaveCaption, albumId, onNext, onPrev, isAdmin }) => {
+        const ImageModal = ({ image, onClose, onSaveCaption, albumId, onNext, onPrev, isAdmin, onSaveScrollPosition }) => {
             if (!image || image.type === 'divider') return null;
 
             const [caption, setCaption] = useState(image.caption || '');
@@ -260,6 +260,7 @@
             useEffect(() => {
                 const handleKeyDown = (e) => {
                     if (e.key === 'Escape') {
+                        onSaveScrollPosition();
                         onClose();
                     } else if (e.key === 'ArrowRight') {
                         onNext();
@@ -271,7 +272,7 @@
                 return () => {
                     document.removeEventListener('keydown', handleKeyDown);
                 };
-            }, [onClose, onNext, onPrev]);
+            }, [onClose, onNext, onPrev, onSaveScrollPosition]);
 
 
             const handleSave = async () => {
@@ -284,10 +285,15 @@
                 setIsSaving(false);
             };
 
+            const handleClose = () => {
+                onSaveScrollPosition();
+                onClose();
+            };
+
             return (
                 <div 
                     className="fixed inset-0 z-[60] bg-black bg-opacity-90 flex justify-center items-center transition-opacity"
-                    onClick={onClose}
+                    onClick={handleClose}
                 >
                     {/* --- Контейнер для кнопок X и i (вверху справа) --- */}
                     <div className="absolute top-4 right-4 z-[70] flex space-x-2 p-2">
@@ -304,7 +310,7 @@
                             </button>
                         )}
                         <button 
-                            onClick={onClose} 
+                            onClick={handleClose} 
                             className="p-2 text-white hover:bg-opacity-70 transition rounded-full bg-black bg-opacity-50"
                             aria-label="Закрыть"
                         >
@@ -404,44 +410,40 @@
 
         // Главный компонент приложения
         const App = () => {
+            // === FIX: Сохранение позиции прокрутки ===
+            const scrollPosition = useRef(0);
 
-  // === Scroll Position Fix ===
-      // --- 🧭 НОВОЕ: сохранение и восстановление позиции прокрутки ---
-    const scrollPosition = useRef(0);
+            const saveScrollPosition = () => {
+                scrollPosition.current = window.scrollY || document.documentElement.scrollTop;
+            };
 
-    const saveScrollPosition = () => {
-        scrollPosition.current = window.scrollY || document.documentElement.scrollTop;
-    };
+            const restoreScrollPosition = () => {
+                if (scrollPosition.current) {
+                    requestAnimationFrame(() => {
+                        setTimeout(() => {
+                            try {
+                                window.scrollTo({ 
+                                    top: scrollPosition.current, 
+                                    behavior: 'auto' 
+                                });
+                            } catch (e) {
+                                window.scrollTo(0, scrollPosition.current);
+                            }
+                        }, 10);
+                    });
+                }
+            };
 
-  React.useLayoutEffect(() => {
-    if (!scrollPosition.current) return;
-    requestAnimationFrame(() => {
-      setTimeout(() => {
-        try {
-          window.scrollTo({ top: scrollPosition.current, behavior: 'auto' });
-        } catch (e) {
-          window.scrollTo(0, scrollPosition.current);
-        }
-      }, 40);
-    });
-  }, [selectedAlbum, enlargedImage, isDeleteMode, isReorderMode]);
+            // Восстанавливаем позицию после рендера
+            useEffect(() => {
+                restoreScrollPosition();
+            }, [albums, selectedAlbum, enlargedImage, isDeleteMode, isReorderMode]);
 
-  React.useEffect(() => {
-    if (!scrollPosition.current) return;
-    const restore = () => {
-      requestAnimationFrame(() => {
-        setTimeout(() => {
-          try {
-            window.scrollTo({ top: scrollPosition.current, behavior: 'auto' });
-          } catch (e) {
-            window.scrollTo(0, scrollPosition.current);
-          }
-        }, 60);
-      });
-    };
-    restore();
-  }, [albums]);
-  // === End Scroll Fix ===
+            // Восстанавливаем позицию после изменений в layout
+            useLayoutEffect(() => {
+                restoreScrollPosition();
+            }, [selectedAlbum, enlargedImage, isDeleteMode, isReorderMode]);
+            // === Конец фикса прокрутки ===
 
             // Используем '|| false' для authReady, чтобы убедиться, что состояние определено
             const [authReady, setAuthReady] = useState(false);
@@ -472,19 +474,6 @@
             const [isAddDividerModalOpen, setIsAddDividerModalOpen] = useState(false);
             
             const [enlargedImage, setEnlargedImage] = useState(null); 
-
-
-
-    useLayoutEffect(() => {
-        if (scrollPosition.current) {
-            window.scrollTo({
-                top: scrollPosition.current,
-                behavior: 'instant' // мгновенно, без анимации
-            });
-        }
-    }, [selectedAlbum, enlargedImage, isDeleteMode, isReorderMode]);
-    // ---------------------------------------------------------------
-
             
             // Состояния для Drag and Drop
             const dragItemUniqueId = useRef(null); 
@@ -564,33 +553,32 @@
             }, []);
 
             // --- ЛОГИКА АДМИНИСТРАТОРА (Login/Logout) ---
-const handleAdminLogin = async (email, password) => {
-    if (!auth) {
-        alertUser('Ошибка', 'Firebase Auth не инициализирован.');
-        return;
-    }
+            const handleAdminLogin = async (email, password) => {
+                if (!auth) {
+                    alertUser('Ошибка', 'Firebase Auth не инициализирован.');
+                    return;
+                }
 
-    try {
-        const userCredential = await signInWithEmailAndPassword(auth, email, password);
-        const user = userCredential.user;
+                try {
+                    const userCredential = await signInWithEmailAndPassword(auth, email, password);
+                    const user = userCredential.user;
 
-        if (user.uid === ADMIN_UID) {
-            setIsAdmin(true);
-            setIsLoginModalOpen(false);
-            localStorage.setItem('isAdmin', 'true');
-            alertUser('Успех', 'Вход Администратора выполнен успешно!');
-        } else {
-            await signOut(auth);
-            alertUser('Ошибка доступа', 'Этот аккаунт не имеет прав администратора.');
-        }
+                    if (user.uid === ADMIN_UID) {
+                        setIsAdmin(true);
+                        setIsLoginModalOpen(false);
+                        localStorage.setItem('isAdmin', 'true');
+                        alertUser('Успех', 'Вход Администратора выполнен успешно!');
+                    } else {
+                        await signOut(auth);
+                        alertUser('Ошибка доступа', 'Этот аккаунт не имеет прав администратора.');
+                    }
 
-    } catch (e) {
-        console.error("Ошибка входа администратора:", e);
-        alertUser('Ошибка входа', `Не удалось войти. Проверьте Email и Пароль. (${e.code})`);
-    }
-};
+                } catch (e) {
+                    console.error("Ошибка входа администратора:", e);
+                    alertUser('Ошибка входа', `Не удалось войти. Проверьте Email и Пароль. (${e.code})`);
+                }
+            };
 
-            
             // --------------------------------------------
 
             // Функции навигации в модальном окне (пропускает разделители)
@@ -623,6 +611,7 @@ const handleAdminLogin = async (email, password) => {
             // Управление режимами редактирования
             const toggleDeleteMode = useCallback(() => {
                 if (!isAdmin) return; // ! Проверка Admin
+                saveScrollPosition();
                 setIsDeleteMode(prev => !prev);
                 if (!isDeleteMode) { 
                     setIsReorderMode(false); // Отключаем переупорядочивание
@@ -631,6 +620,7 @@ const handleAdminLogin = async (email, password) => {
 
             const toggleReorderMode = useCallback(() => {
                 if (!isAdmin) return; // ! Проверка Admin
+                saveScrollPosition();
                 setIsReorderMode(prev => !prev);
                 if (!isReorderMode) { 
                     setIsDeleteMode(false); // Отключаем удаление
@@ -639,7 +629,7 @@ const handleAdminLogin = async (email, password) => {
             // -----------------------------------------
 
             const handleGoHome = useCallback(() => {
-        saveScrollPosition();
+                saveScrollPosition();
                 setSelectedAlbum(null);
                 setCurrentView('home');
                 setIsDeleteMode(false); 
@@ -647,7 +637,7 @@ const handleAdminLogin = async (email, password) => {
             }, []); 
 
             const handleOpenAlbum = useCallback((album) => {
-        saveScrollPosition();
+                saveScrollPosition();
                 setSelectedAlbum(album);
                 setCurrentView('album');
                 setIsDeleteMode(false); 
@@ -737,6 +727,7 @@ const handleAdminLogin = async (email, password) => {
             
             // **ФУНКЦИЯ ПЕРЕИМЕНОВАНИЯ АЛЬБОМА**
             const renameAlbum = async (albumId, newName) => {
+                saveScrollPosition();
                 if (!isAdmin) {
                     alertUser('Ошибка доступа', 'Вы должны быть Администратором для переименования альбомов.');
                     return false;
@@ -813,7 +804,7 @@ const handleAdminLogin = async (email, password) => {
             
             // **УДАЛЕНИЕ ЭЛЕМЕНТА (ФОТО ИЛИ РАЗДЕЛИТЕЛЬ)**
             const deletePhoto = async (albumId, itemToDelete) => {
-        saveScrollPosition();
+                saveScrollPosition();
                 if (!isAdmin) { // ! Проверка Admin
                     alertUser('Ошибка доступа', 'Вы должны быть Администратором для удаления элементов.');
                     return;
@@ -842,7 +833,7 @@ const handleAdminLogin = async (email, password) => {
                         // Закрываем модал, если удаленный элемент был увеличен
                         if (enlargedImage && enlargedImage.timestamp === itemToDelete.timestamp) {
                             saveScrollPosition();
-        setEnlargedImage(null);
+                            setEnlargedImage(null);
                         }
                     }
 
@@ -856,6 +847,7 @@ const handleAdminLogin = async (email, password) => {
             // **ИЗМЕНЕНИЕ ПОРЯДКА ФОТОГРАФИЙ И РАЗДЕЛИТЕЛЕЙ (DRAG AND DROP)**
             const handleDragStart = useCallback((e, uniqueId) => {
                 if (!isReorderMode || !isAdmin) return; // ! Проверка Admin
+                saveScrollPosition();
                 dragItemUniqueId.current = uniqueId;
                 e.dataTransfer.effectAllowed = "move";
                 // Установка Drag Image для лучшего UX
@@ -876,6 +868,7 @@ const handleAdminLogin = async (email, password) => {
             }, [isReorderMode, isAdmin]);
 
             const handleDrop = useCallback(async (e) => {
+                saveScrollPosition();
                 if (!isAdmin) {
                     alertUser('Ошибка доступа', 'Вы должны быть Администратором для изменения порядка.');
                     dragItemUniqueId.current = null;
@@ -938,6 +931,7 @@ const handleAdminLogin = async (email, password) => {
 
             // **СОЗДАНИЕ РАЗДЕЛИТЕЛЯ**
             const addDivider = async (albumId, text) => {
+                saveScrollPosition();
                 if (!isAdmin) { // ! Проверка Admin
                     alertUser('Ошибка доступа', 'Вы должны быть Администратором для добавления разделителей.');
                     return;
@@ -973,6 +967,7 @@ const handleAdminLogin = async (email, password) => {
 
             // Создание нового альбома
             const createNewAlbum = async (name) => {
+                saveScrollPosition();
                 if (!isAdmin) { // ! Проверка Admin
                     alertUser('Ошибка доступа', 'Вы должны быть Администратором для создания альбомов.');
                     return;
@@ -1001,6 +996,7 @@ const handleAdminLogin = async (email, password) => {
 
             // Добавление ссылки на фото в альбом
             const addPhotoLink = async (albumId, url, aspectRatio = 1.0) => {
+                saveScrollPosition();
                 if (!isAdmin) { // ! Проверка Admin
                     alertUser('Ошибка доступа', 'Вы должны быть Администратором для добавления фото.');
                     return;
@@ -1168,64 +1164,64 @@ const handleAdminLogin = async (email, password) => {
             // ----------------------------------------------
             
             // --- Модал для входа администратора ---
-const AdminLoginModal = () => {
+            const AdminLoginModal = () => {
 
-    const [email, setEmail] = useState('');
-    const [password, setPassword] = useState('');
+                const [email, setEmail] = useState('');
+                const [password, setPassword] = useState('');
 
-    const handleSubmit = (e) => {
-        e.preventDefault();
-        handleAdminLogin(email, password); // функция из app.jsx
-        setPassword('');
-    };
+                const handleSubmit = (e) => {
+                    e.preventDefault();
+                    handleAdminLogin(email, password); // функция из app.jsx
+                    setPassword('');
+                };
 
-    return (
-        <Modal
-            isOpen={isLoginModalOpen}
-            onClose={() => setIsLoginModalOpen(false)}
-            title="Вход Администратора"
-        >
-            <form onSubmit={handleSubmit} className="space-y-4">
-
-                {/* Поле для email */}
-                <input
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="Введите email администратора"
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500"
-                    required
-                />
-
-                {/* Поле для пароля */}
-                <input
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="Введите пароль администратора"
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500"
-                    required
-                />
-
-                <div className="flex justify-end mt-4 space-x-3">
-                    <button
-                        type="button"
-                        onClick={() => setIsLoginModalOpen(false)}
-                        className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition"
+                return (
+                    <Modal
+                        isOpen={isLoginModalOpen}
+                        onClose={() => setIsLoginModalOpen(false)}
+                        title="Вход Администратора"
                     >
-                        Отмена
-                    </button>
-                    <button
-                        type="submit"
-                        className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 transition shadow-md"
-                    >
-                        Войти
-                    </button>
-                </div>
-            </form>
-        </Modal>
-    );
-};
+                        <form onSubmit={handleSubmit} className="space-y-4">
+
+                            {/* Поле для email */}
+                            <input
+                                type="email"
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
+                                placeholder="Введите email администратора"
+                                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500"
+                                required
+                            />
+
+                            {/* Поле для пароля */}
+                            <input
+                                type="password"
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                                placeholder="Введите пароль администратора"
+                                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500"
+                                required
+                            />
+
+                            <div className="flex justify-end mt-4 space-x-3">
+                                <button
+                                    type="button"
+                                    onClick={() => setIsLoginModalOpen(false)}
+                                    className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition"
+                                >
+                                    Отмена
+                                </button>
+                                <button
+                                    type="submit"
+                                    className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 transition shadow-md"
+                                >
+                                    Войти
+                                </button>
+                            </div>
+                        </form>
+                    </Modal>
+                );
+            };
 
             // ----------------------------------------------
 
@@ -1342,23 +1338,23 @@ const AdminLoginModal = () => {
                         setPreviewImage(url);
                     }
                 };
-// --- АВТО-РАСЧЁТ ПРОПОРЦИЙ ---
-useEffect(() => {
-    if (!previewImage) return;
+                // --- АВТО-РАСЧЁТ ПРОПОРЦИЙ ---
+                useEffect(() => {
+                    if (!previewImage) return;
 
-    const img = new Image();
-    img.onload = () => {
-        if (img.naturalWidth && img.naturalHeight) {
-            const ratio = (img.naturalWidth / img.naturalHeight).toFixed(2);
-            setAspectRatio(ratio);
-            console.log(`Авто-пропорции определены: ${ratio}`);
-        }
-    };
-    img.onerror = () => {
-        console.warn("Не удалось определить пропорции изображения.");
-    };
-    img.src = previewImage;
-}, [previewImage]);
+                    const img = new Image();
+                    img.onload = () => {
+                        if (img.naturalWidth && img.naturalHeight) {
+                            const ratio = (img.naturalWidth / img.naturalHeight).toFixed(2);
+                            setAspectRatio(ratio);
+                            console.log(`Авто-пропорции определены: ${ratio}`);
+                        }
+                    };
+                    img.onerror = () => {
+                        console.warn("Не удалось определить пропорции изображения.");
+                    };
+                    img.src = previewImage;
+                }, [previewImage]);
 
                 return (
                     <Modal isOpen={isAddPhotoModalOpen} onClose={() => setIsAddPhotoModalOpen(false)} title="Добавить фото по ссылке">
@@ -1732,12 +1728,12 @@ useEffect(() => {
             if (error && error.isCritical) {
                 return (
                     <div className="flex items-center justify-center min-h-screen bg-gray-100 p-4">
-                        <div className="bg-red-100 border-l-4 border-red-500 p-6 rounded-xl text-red-900 shadow-2xl max-w-lg">
-                            <h1 className="text-2xl font-bold mb-3">{error.name}</h1>
-                            <p className="text-red-800 whitespace-pre-wrap">{error.message}</p>
-                            <p className="mt-4 text-sm font-semibold">Пожалуйста, убедитесь, что переменные Firebase правильно настроены.</p>
-                        </div>
-                    </div>
+                        <div className="bg-red-100 border-l-4 border-red-500 p-6 rounded-xl text-red-900 shadow-2xl max-w-lg">
+                            <h1 className="text-2xl font-bold mb-3">{error.name}</h1>
+                            <p className="text-red-800 whitespace-pre-wrap">{error.message}</p>
+                            <p className="mt-4 text-sm font-semibold">Пожалуйста, убедитесь, что переменные Firebase правильно настроены.</p>
+                        </div>
+                    </div>
                 );
             }
             
@@ -1883,6 +1879,7 @@ useEffect(() => {
                         onNext={handleNextImage}
                         onPrev={handlePrevImage}
                         isAdmin={isAdmin} 
+                        onSaveScrollPosition={saveScrollPosition}
                     />
 
                 </div>
