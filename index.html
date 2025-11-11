@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Leon H-Arts: Галерея Фанфиков</title>
-<!-- ФАВИКОНЫ: Сгенерированы через Favicon.io -->
 <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
 <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
 <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
@@ -12,18 +11,16 @@
 <link rel="shortcut icon" href="/favicon.ico">
 <meta name="theme-color" content="#ffffff">
     
-    <!-- 1. Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     
-    <!-- 2. React, ReactDOM, Babel CDNs -->
     <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
-    <!-- 3. Firebase CDNs -->
-<script type="module">
+    <script 
+type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-    import { 
+import { 
         getAuth, 
         signInAnonymously, 
         signInWithCustomToken, 
@@ -31,7 +28,7 @@
         signInWithEmailAndPassword, 
         signOut 
     } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-    import { 
+import { 
         getFirestore, 
         doc, 
         onSnapshot, 
@@ -42,28 +39,27 @@
         arrayUnion, 
         serverTimestamp 
     } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-    
-    // --- Экспортируем всё в window, чтобы React-скрипт мог обращаться ---
+// --- Экспортируем всё в window, чтобы React-скрипт мог обращаться ---
     window.initializeApp = initializeApp;
     window.getAuth = getAuth;
-    window.signInAnonymously = signInAnonymously;
+window.signInAnonymously = signInAnonymously;
     window.signInWithCustomToken = signInWithCustomToken;
     window.onAuthStateChanged = onAuthStateChanged;
     window.signInWithEmailAndPassword = signInWithEmailAndPassword; // ✅ ВАЖНО — добавлено!
-    window.signOut = signOut; // ✅ Тоже нужно для выхода
+    window.signOut = signOut;
+// ✅ Тоже нужно для выхода
     window.getFirestore = getFirestore;
     window.doc = doc;
     window.onSnapshot = onSnapshot;
-    window.collection = collection;
+window.collection = collection;
     window.query = query;
     window.addDoc = addDoc;
     window.updateDoc = updateDoc;
     window.arrayUnion = arrayUnion;
     window.serverTimestamp = serverTimestamp;
-
-    // --- Глобальные переменные для оффлайн-режима ---
+// --- Глобальные переменные для оффлайн-режима ---
     if (typeof window.__app_id === 'undefined') window.__app_id = 'default-app-id';
-    if (typeof window.__initial_auth_token === 'undefined') window.__initial_auth_token = null;
+if (typeof window.__initial_auth_token === 'undefined') window.__initial_auth_token = null;
     if (typeof window.__firebase_config === 'undefined') {
         window.__firebase_config = JSON.stringify({
             apiKey: "AIzaSyBpThMaS36IkmAqUrvk9WpWi0AhOhndhU8",
@@ -71,37 +67,47 @@
             projectId: "leon-h-arts-6b69b",
             storageBucket: "leon-h-arts-6b69b.firebasestorage.app",
             messagingSenderId: "162244900947",
-            appId: "1:162244900947:web:0d265bc4fe5639380ceea6"
+            
+appId: "1:162244900947:web:0d265bc4fe5639380ceea6"
         });
-    }
+}
 </script>
     
     <style>
         /* Общие стили для фона и шрифта */
         body {
             font-family: 'Inter', sans-serif;
-            background-color: #f9fafb;
+background-color: #f9fafb;
             margin: 0;
             padding: 0;
             min-height: 100vh;
+            /* >>>>>>>>>>>>>>>>>> ИСПРАВЛЕНИЕ #1: Глобальная стабилизация прокрутки (Scroll Anchoring) */
+            overflow-anchor: none; /* [1] Отключает автоматическое якорение прокрутки браузером, что устраняет нежелательные скачки при удалении или перемещении элементов. */
+        }
+        /* >>>>>>>>>>>>>>>>>> ИСПРАВЛЕНИЕ #2: Фиксация страницы при открытом модале [2] */
+        body.modal-open {
+            overflow: hidden; /* Блокирует прокрутку основного контента */
+            position: fixed; /* Предотвращает сдвиг контента при исчезновении полосы прокрутки */
+            width: 100%;
         }
         /* Устранение проблем с прокруткой и переполнением */
-        .min-h-screen { min-height: 100vh; }
+       .min-h-screen { min-height: 100vh;
+}
         
         /* Стили для модала изображения */
-        .text-with-shadow {
+       .text-with-shadow {
           color: white;
-          text-shadow: 
+text-shadow: 
             -1px -1px 0 #000,  
              1px -1px 0 #000,
             -1px 1px 0 #000,
              1px 1px 0 #000,
              0 0 10px rgba(0, 0, 0, 1);
-        }
+}
 
-        .fixed-click-zone {
-          position: fixed; 
-          top: 50%;
+       .fixed-click-zone {
+          position: fixed;
+top: 50%;
           transform: translateY(-50%);
           width: 20%; 
           height: 50%; 
@@ -109,34 +115,37 @@
           cursor: pointer;
           display: flex;
           align-items: center;
-          -webkit-tap-highlight-color: transparent; 
-        }
-        .fixed-click-zone.left {
+          -webkit-tap-highlight-color: transparent;
+}
+       .fixed-click-zone.left {
           left: 0;
-          justify-content: flex-start;
+justify-content: flex-start;
         }
-        .fixed-click-zone.right {
+       .fixed-click-zone.right {
           right: 0;
-          justify-content: flex-end;
+justify-content: flex-end;
         }
         
-        .nav-arrow {
+       .nav-arrow {
           color: white;
-          padding: 0;
+padding: 0;
           cursor: pointer;
           filter: drop-shadow(0 0 5px rgba(0, 0, 0, 0.9));
-        }
+}
         
-        .fixed-click-zone.left .nav-arrow {
-          padding-left: 0.5rem; 
-        }
-        .fixed-click-zone.right .nav-arrow {
-          padding-right: 0.5rem; 
-        }
+       .fixed-click-zone.left.nav-arrow {
+          padding-left: 0.5rem;
+}
+       .fixed-click-zone.right.nav-arrow {
+          padding-right: 0.5rem;
+}
         
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-        @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-        .animate-fade-in-up { animation: fadeInUp 0.3s ease-out; }
+        @keyframes fadeIn { from { opacity: 0;
+} to { opacity: 1; } }
+        @keyframes fadeInUp { from { opacity: 0;
+transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+       .animate-fade-in-up { animation: fadeInUp 0.3s ease-out;
+}
     </style>
 </head>
 <body>
@@ -145,365 +154,414 @@
     <script type="text/babel">
         // Получаем глобальные переменные, предоставленные Canvas
         const {useState, useEffect, useCallback, useMemo, useRef , useLayoutEffect} = React;
-        const { initializeApp, getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged, getFirestore, doc, onSnapshot, collection, query, addDoc, updateDoc, arrayUnion, serverTimestamp } = window;
-
-        // --- Встроенные React SVG компоненты (замена lucide-react) ---
-        const Icon = ({ children, size = 24, className = '', ...props }) => (
+const { initializeApp, getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged, getFirestore, doc, onSnapshot, collection, query, addDoc, updateDoc, arrayUnion, serverTimestamp } = window;
+// --- Встроенные React SVG компоненты (замена lucide-react) ---
+        const Icon = ({ children, size = 24, className = '',...props }) => (
             <svg
                 xmlns="http://www.w3.org/2000/svg"
                 width={size}
                 height={size}
-                viewBox="0 0 24 24"
+          
+      viewBox="0 0 24 24"
                 fill="none"
                 stroke="currentColor"
                 strokeWidth="2"
                 strokeLinecap="round"
                 strokeLinejoin="round"
-                className={`lucide ${className}`}
+           
+     className={`lucide ${className}`}
                 {...props}
             >
                 {children}
             </svg>
         );
-
-        const Plus = (props) => (
+const Plus = (props) => (
             <Icon {...props}><line x1="12" x2="12" y1="5" y2="19" /><line x1="5" x2="19" y1="12" y2="12" /></Icon>
         );
-        const X = (props) => (
+const X = (props) => (
             <Icon {...props}><line x1="18" x2="6" y1="6" y2="18" /><line x1="6" x2="18" y1="6" y2="18" /></Icon>
         );
-        const ImageIcon = (props) => (
+const ImageIcon = (props) => (
             <Icon {...props}><rect width="18" height="18" x="3" y="3" rx="2" ry="2" /><circle cx="9" cy="9" r="2" /><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21" /></Icon>
         );
-        const Loader = (props) => (
+const Loader = (props) => (
             <Icon {...props}><path d="M12 2v4" /><path d="M12 18v4" /><path d="M4.93 4.93l2.83 2.83" /><path d="M16.24 16.24l2.83 2.83" /><path d="M2 12h4" /><path d="M18 12h4" /><path d="M4.93 19.07l2.83-2.83" /><path d="M16.24 7.76l2.83-2.83" /></Icon>
         );
-        const Trash2 = (props) => (
-            <Icon {...props}><path d="M3 6h18" /><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" /><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" /><line x1="10" x2="10" y1="11" y2="17" /><line x1="14" x2="14" y1="11" y2="17" /></Icon>
+const Trash2 = (props) => (
+            <Icon {...props}><path d="M3 6h18" /><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" /><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" /><line x1="10" x2="10" y1="11" y2="17" /><line x1="14" x2="14" y1="11" y2="17" /></Trash2>
         );
-        const ArrowUpDown = (props) => (
-            <Icon {...props}><path d="m21 16-4 4-4-4" /><path d="M17 20V4" /><path d="m3 8 4-4 4 4" /><path d="M7 4v16" /></Icon>
+const ArrowUpDown = (props) => (
+            <Icon {...props}><path d="m21 16-4 4-4-4" /><path d="M17 20V4" /><path d="m3 8 4-4 4 4" /><path d="M7 4v16" /></ArrowUpDown>
         );
-        const GripVertical = (props) => (
-            <Icon {...props}><circle cx="9" cy="12" r="1" /><circle cx="9" cy="5" r="1" /><circle cx="9" cy="19" r="1" /><circle cx="15" cy="12" r="1" /><circle cx="15" cy="5" r="1" /><circle cx="15" cy="19" r="1" /></Icon>
+const GripVertical = (props) => (
+            <Icon {...props}><circle cx="9" cy="12" r="1" /><circle cx="9" cy="5" r="1" /><circle cx="9" cy="19" r="1" /><circle cx="15" cy="12" r="1" /><circle cx="15" cy="5" r="1" /><circle cx="15" cy="19" r="1" /></GripVertical>
         );
-        const Save = (props) => (
-            <Icon {...props}><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" /><path d="M17 21v-8H7v8" /><path d="M7 3v5h8" /></Icon>
+const Save = (props) => (
+            <Icon {...props}><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" /><path d="M17 21v-8H7v8" /><path d="M7 3v5h8" /></Save>
         );
-        const Pencil = (props) => (
-            <Icon {...props}><path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z" /></Icon>
+const Pencil = (props) => (
+            <Icon {...props}><path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z" /></Pencil>
         );
-        const ChevronLeft = (props) => (
-            <Icon {...props}><path d="m15 18-6-6 6-6" /></Icon>
+const ChevronLeft = (props) => (
+            <Icon {...props}><path d="m15 18-6-6 6-6" /></ChevronLeft>
         );
-        const ChevronRight = (props) => (
-            <Icon {...props}><path d="m9 18 6-6-6-6" /></Icon>
+const ChevronRight = (props) => (
+            <Icon {...props}><path d="m9 18 6-6-6-6" /></ChevronRight>
         );
-        const Key = (props) => (
-            <Icon {...props}><path d="m15.5 13.5 1.7-1.7a2.85 2.85 0 1 1 4 4L19 18l-2 2-4-4 1.5-1.5z" /><path d="M11 20 5 14v-2.5l2.5-2.5h1.7" /><path d="m10 12-1-1" /></Icon>
+const Key = (props) => (
+            <Icon {...props}><path d="m15.5 13.5 1.7-1.7a2.85 2.85 0 1 1 4 4L19 18l-2 2-4-4 1.5-1.5z" /><path d="M11 20 5 14v-2.5l2.5-2.5h1.7" /><path d="m10 12-1-1" /></Key>
         );
-        const Edit = (props) => (
-            <Icon {...props}><path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z" /></Icon>
+const Edit = (props) => (
+            <Icon {...props}><path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z" /></Edit>
         );
-        const AlertTriangle = (props) => (
-             <Icon {...props}><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" /><line x1="12" x2="12" y1="9" y2="13" /><line x1="12" x2="12" y1="17" y2="17" /></Icon>
+const AlertTriangle = (props) => (
+             <Icon {...props}><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" /><line x1="12" x2="12" y1="9" y2="13" /><line x1="12" x2="12" y1="17" y2="17" /></AlertTriangle>
         );
-
-
-        // --- КОНСТАНТЫ И НАСТРОЙКИ ---
-        const ADMIN_UID = "fqU30jiK7rOobaur0XN2pVY4PMC2";  
-        const PUBLIC_COLLECTION_NAME = "fanfic_gallery_albums"; 
+// --- КОНСТАНТЫ И НАСТРОЙКИ ---
+        const ADMIN_UID = "fqU30jiK7rOobaur0XN2pVY4PMC2";
+const PUBLIC_COLLECTION_NAME = "fanfic_gallery_albums"; 
 
         // Использование глобальных переменных Canvas
         const firebaseConfig = JSON.parse(window.__firebase_config);
-        const appId = window.__app_id;
+const appId = window.__app_id;
         const initialAuthToken = window.__initial_auth_token;
 
         let app = null;
         let db = null;
         let auth = null;
-        let configError = null;
+let configError = null;
 
         try {
             if (firebaseConfig.apiKey) {
                 app = initializeApp(firebaseConfig);
-                db = getFirestore(app);
+db = getFirestore(app);
                 auth = getAuth(app);
             } else {
                 throw new Error("API Key Firebase не определен.");
-            }
+}
         } catch (e) {
             configError = {
                 isCritical: true,
                 name: "Ошибка Конфигурации Firebase",
-                message: `Не удалось загрузить конфигурацию Firebase. ${e.message}`
+                message: `Не удалось загрузить конфигурацию Firebase.
+${e.message}`
             };
-        }
+}
 
         const TARGET_ROW_HEIGHT = 300; 
         const GALLERY_GAP_PX = 2; 
-        const MAX_ROW_HEIGHT_MULTIPLIER = 1.5; 
-
-
-        // --- КОМПОНЕНТ: Модальное окно для увеличенного изображения ---
+        const MAX_ROW_HEIGHT_MULTIPLIER = 1.5;
+// --- КОМПОНЕНТ: Модальное окно для увеличенного изображения ---
         const ImageModal = ({ image, onClose, onSaveCaption, albumId, onNext, onPrev, isAdmin }) => {
-            if (!image || image.type === 'divider') return null;
+            if (!image |
 
-            const [caption, setCaption] = useState(image.caption || '');
-            const [isSaving, setIsSaving] = useState(false);
-            const [isEditPanelOpen, setIsEditPanelOpen] = useState(false); 
-            
-            useEffect(() => {
-                setCaption(image.caption || '');
+| image.type === 'divider') return null;
+const [caption, setCaption] = useState(image.caption |
+
+| '');
+            const = useState(false);
+            const [isEditPanelOpen, setIsEditPanelOpen] = useState(false);
+useEffect(() => {
+                setCaption(image.caption |
+
+| '');
             }, [image.caption]);
-
-            useEffect(() => {
+useEffect(() => {
                 const handleKeyDown = (e) => {
                     if (e.key === 'Escape') {
                         onClose();
                     } else if (e.key === 'ArrowRight') {
-                        onNext();
+   
+                     onNext();
                     } else if (e.key === 'ArrowLeft') {
                         onPrev();
                     }
-                };
+         
+       };
                 document.addEventListener('keydown', handleKeyDown);
                 return () => {
                     document.removeEventListener('keydown', handleKeyDown);
                 };
             }, [onClose, onNext, onPrev]);
-
-
-            const handleSave = async () => {
+const handleSave = async () => {
                 if (!isAdmin) {
                      console.warn("Попытка сохранения без прав администратора.");
-                     return;
+return;
                 }
                 setIsSaving(true);
-                await onSaveCaption(albumId, image.timestamp, caption);
+await onSaveCaption(albumId, image.timestamp, caption);
                 setIsSaving(false);
             };
 
             return (
                 <div 
-                    className="fixed inset-0 z-[60] bg-black bg-opacity-90 flex justify-center items-center transition-opacity"
+                    className="fixed inset-0 z- bg-black bg-opacity-90 flex justify-center items-center transition-opacity"
                     onClick={onClose}
                 >
-                    {/* --- Контейнер для кнопок X и i (вверху справа) --- */}
-                    <div className="absolute top-4 right-4 z-[70] flex space-x-2 p-2">
-                        {isAdmin && ( // ! Кнопка редактирования только для администратора
-                            <button
-                                onClick={(e) => { e.stopPropagation(); setIsEditPanelOpen(prev => !prev); }}
+            
+        {/* --- Контейнер для кнопок X и i (вверху справа) --- */}
+                    <div className="absolute top-4 right-4 z- flex space-x-2 p-2">
+                        {isAdmin && ( //! Кнопка редактирования только для администратора
+                     
+       <button
+                                onClick={(e) => { e.stopPropagation(); setIsEditPanelOpen(prev =>!prev); }}
                                 className={`p-2 text-white transition rounded-full shadow-lg ${
-                                    isEditPanelOpen ? 'bg-indigo-600' : 'bg-black bg-opacity-50 hover:bg-opacity-70'
+                 
+                   isEditPanelOpen? 'bg-indigo-600' : 'bg-black bg-opacity-50 hover:bg-opacity-70'
                                 }`}
                                 title="Информация и подпись (Только Админ)"
-                                aria-label="Открыть/Закрыть панель информации"
+       
+                         aria-label="Открыть/Закрыть панель информации"
                             >
                                 <Pencil size={24} />
-                            </button>
+           
+                 </button>
                         )}
                         <button 
                             onClick={onClose} 
-                            className="p-2 text-white hover:bg-opacity-70 transition rounded-full bg-black bg-opacity-50"
+     
+                       className="p-2 text-white hover:bg-opacity-70 transition rounded-full bg-black bg-opacity-50"
                             aria-label="Закрыть"
                         >
-                            <X size={28} />
+                   
+         <X size={28} />
                         </button>
                     </div>
                     
-                    {/* --- Левая/Правая навигация --- */}
+                    {/* --- Левая/Правая навигация --- 
+*/}
                     <div 
                         className="fixed-click-zone left group"
-                        onClick={(e) => { e.stopPropagation(); onPrev(); }}
+                        onClick={(e) => { e.stopPropagation();
+onPrev(); }}
                         title="Предыдущее фото (Стрелка влево)"
                     >
                         <button className="nav-arrow opacity-0 group-hover:opacity-100 transition-opacity">
-                            <ChevronLeft size={40} className="w-10 h-10 md:w-12 md:h-12" />
+                        
+    <ChevronLeft size={40} className="w-10 h-10 md:w-12 md:h-12" />
                         </button>
                     </div>
                     <div 
-                        className="fixed-click-zone right group"
-                        onClick={(e) => { e.stopPropagation(); onNext(); }}
+                        className="fixed-click-zone 
+right group"
+                        onClick={(e) => { e.stopPropagation();
+onNext(); }}
                         title="Следующее фото (Стрелка вправо)"
                     >
                         <button className="nav-arrow opacity-0 group-hover:opacity-100 transition-opacity">
-                            <ChevronRight size={40} className="w-10 h-10 md:w-12 md:h-12" />
+                        
+    <ChevronRight size={40} className="w-10 h-10 md:w-12 md:h-12" />
                         </button>
                     </div>
                     
                     {/* Контейнер изображения */}
-                    <div 
+   
+                 <div 
                         className="w-full h-full flex justify-center items-center" 
                         onClick={(e) => e.stopPropagation()} 
                     >
-                        <img 
+      
+                  <img 
                             src={image.url} 
-                            alt={image.caption || "Увеличенное фото"} 
+                            alt={image.caption ||
+"Увеличенное фото"} 
                             className="max-w-full max-h-screen object-contain" 
                             onError={(e) => { 
-                                e.target.onerror = null; 
-                                e.target.src = "https://placehold.co/800x600/CCCCCC/333333?text=Ошибка+загрузки"; 
+                                e.target.onerror = null;
+e.target.src = "https://placehold.co/800x600/CCCCCC/333333?text=Ошибка+загрузки"; 
                                 e.target.className = "max-w-full max-h-[70vh] object-contain p-4"; 
                             }}
                         />
                     </div>
                     
-                    {/* --- Контейнер подписи и редактирования --- */}
+                    {/* --- Контейнер подписи и редактирования --- 
+*/}
                     <div 
-                        className="absolute bottom-4 left-4 z-[70] max-w-sm w-full sm:w-auto" 
+                        className="absolute bottom-4 left-4 z- max-w-sm w-full sm:w-auto" 
                         onClick={(e) => e.stopPropagation()} 
                     >
-                        <div 
+ 
+                       <div 
                             className="px-4 py-3 sm:px-6 sm:py-4 bg-transparent text-white"
                         >
-                            {image.caption ? (
+                   
+         {image.caption?
+(
                                 <p className="text-sm font-medium text-with-shadow">{image.caption}</p>
                             ) : (
-                                <p className="text-sm font-light text-with-shadow text-gray-300">Подпись отсутствует</p>
+                                <p className="text-sm font-light 
+text-with-shadow text-gray-300">Подпись отсутствует</p>
                             )}
                         </div>
 
                         {/* Панель редактирования подписи (Только для Админа) */}
-                        {isAdmin && (
+               
+         {isAdmin && (
                             <div 
                                 className={`
-                                    bg-white p-4 sm:p-6 rounded-xl shadow-2xl transition-all duration-300 ease-in-out mt-2
-                                    ${isEditPanelOpen ? 'block' : 'hidden'}
+                            
+        bg-white p-4 sm:p-6 rounded-xl shadow-2xl transition-all duration-300 ease-in-out mt-2
+                                    ${isEditPanelOpen? 'block' : 'hidden'}
                                 `}
-                            >
+            
+                >
                                 <h3 className="text-lg font-bold text-gray-800 mb-3">Редактировать подпись</h3>
                                     <textarea
-                                        value={caption}
+           
+                             value={caption}
                                         onChange={(e) => setCaption(e.target.value)}
-                                        placeholder="Введите подпись, например, 'Главный персонаж Аниме X'"
+                             
+           placeholder="Введите подпись, например, 'Главный персонаж Аниме X'"
                                         className="w-full flex-grow p-3 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500"
-                                        maxLength={200}
+                                    
+    maxLength={200}
                                         rows={3}
                                     />
-                                <button 
+                    
+            <button 
                                     onClick={handleSave}
                                     disabled={isSaving}
-                                    className="flex items-center px-4 py-3 bg-indigo-600 text-white font-medium rounded-lg hover:bg-indigo-700 transition disabled:bg-indigo-400 shadow-md"
+               
+                     className="flex items-center px-4 py-3 bg-indigo-600 text-white font-medium rounded-lg hover:bg-indigo-700 transition disabled:bg-indigo-400 shadow-md"
                                 >
-                                    {isSaving ? (
+                                    
+{isSaving? (
                                         <Loader className="animate-spin h-5 w-5 mr-2" />
                                     ) : (
-                                        <Save className="h-5 w-5 mr-2" />
+               
+                         <Save className="h-5 w-5 mr-2" />
                                     )}
-                                    {isSaving ? 'Сохранение...' : 'Сохранить'}
+                                   
+ {isSaving? 'Сохранение...' : 'Сохранить'}
                                 </button>
                             </div>
                         )}
-                    </div>
+           
+         </div>
                 </div>
             );
-        };
+};
         // --------------------------------------------------------------------
 
 
         // Главный компонент приложения
         const App = () => {
-            // Используем '|| false' для authReady, чтобы убедиться, что состояние определено
-            const [authReady, setAuthReady] = useState(false);
-            const [userId, setUserId] = useState(null);
-            const [albums, setAlbums] = useState([]);
+            // Используем '||
+false' для authReady, чтобы убедиться, что состояние определено
+            const = useState(false);
+const [userId, setUserId] = useState(null);
+            const [albums, setAlbums] = useState();
             const [loading, setLoading] = useState(true);
-            // Инициализируем state ошибкой, если она возникла при загрузке конфига
-            const [error, setError] = useState(configError || null); 
+// Инициализируем state ошибкой, если она возникла при загрузке конфига
+            const [error, setError] = useState(configError |
 
-            // --- НОВОЕ: Состояние администратора ---
+| null);
+// --- НОВОЕ: Состояние администратора ---
             const [isAdmin, setIsAdmin] = useState(false);
-            const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
+const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
             
             // --- НОВОЕ: Состояние переименования ---
-            const [isRenameModalOpen, setIsRenameModalOpen] = useState(false);
-            const [albumToRename, setAlbumToRename] = useState(null);
+            const = useState(false);
+const = useState(null);
 
             const [currentView, setCurrentView] = useState('home'); 
-            const [selectedAlbum, setSelectedAlbum] = useState(null);
-
-            // Состояния для режимов редактирования
-            const [isDeleteMode, setIsDeleteMode] = useState(false);
-            const [isReorderMode, setIsReorderMode] = useState(false);
+            const = useState(null);
+// Состояния для режимов редактирования
+            const = useState(false);
+const = useState(false);
             
             // Состояние модальных окон
             const [isAddAlbumModalOpen, setIsAddAlbumModalOpen] = useState(false);
-            const [isAddPhotoModalOpen, setIsAddPhotoModalOpen] = useState(false);
-            const [isAddDividerModalOpen, setIsAddDividerModalOpen] = useState(false);
+const [isAddPhotoModalOpen, setIsAddPhotoModalOpen] = useState(false);
+            const = useState(false);
             
-            const [enlargedImage, setEnlargedImage] = useState(null); 
-
-    // --- 🧭 НОВОЕ: сохранение и восстановление позиции прокрутки ---
+            const [enlargedImage, setEnlargedImage] = useState(null);
+// --- 🧭 НОВОЕ: сохранение и восстановление позиции прокрутки ---
     const scrollPosition = useRef(0);
+const saveScrollPosition = () => {
+        scrollPosition.current = window.scrollY |
 
-    const saveScrollPosition = () => {
-        scrollPosition.current = window.scrollY || document.documentElement.scrollTop;
+| document.documentElement.scrollTop;
     };
-
-    useLayoutEffect(() => {
+useLayoutEffect(() => {
         if (scrollPosition.current) {
             window.scrollTo({
                 top: scrollPosition.current,
                 behavior: 'instant' // мгновенно, без анимации
             });
         }
-    }, [selectedAlbum, enlargedImage, isDeleteMode, isReorderMode]);
-    // ---------------------------------------------------------------
+    },);
+// ---------------------------------------------------------------
+            
+            // >>>>>>>>>>>>>>>>>> ИСПРАВЛЕНИЕ #3: Управление классом блокировки прокрутки [2]
+            useEffect(() => {
+                if (enlargedImage) {
+                    document.body.classList.add('modal-open');
+                } else {
+                    document.body.classList.remove('modal-open');
+                }
+            }, [enlargedImage]);
+            // ---------------------------------------------------------------
 
             
             // Состояния для Drag and Drop
-            const dragItemUniqueId = useRef(null); 
-            const dragOverItemUniqueId = useRef(null); 
+            const dragItemUniqueId = useRef(null);
+const dragOverItemUniqueId = useRef(null); 
 
             // --- 1. Аутентификация и Настройка ---
             useEffect(() => {
                 // Если есть критическая ошибка конфигурации, дальше не идем
                 if (error && error.isCritical) {
                     setAuthReady(true); 
-                    setLoading(false);
+           
+         setLoading(false);
                     return;
                 }
 
                 // Устанавливаем статус администратора из localStorage (простая сессия)
                 const adminStatus = localStorage.getItem('isAdmin');
-                if (adminStatus === 'true') {
+             
+   if (adminStatus === 'true') {
                     setIsAdmin(true);
                 }
 
                 const setupFirebase = async () => {
                     if (!auth) { 
-                        // Если auth не инициализирован (из-за ошибки конфига), просто завершаем.
+            
+            // Если auth не инициализирован (из-за ошибки конфига), просто завершаем.
                         setAuthReady(true);
                         return;
                     }
-                    try {
+           
+         try {
                         // Всегда пытаемся войти, чтобы получить userId для сессии
                         if (initialAuthToken) {
                             await signInWithCustomToken(auth, initialAuthToken);
-                        } else {
+} else {
                             await signInAnonymously(auth);
-                        }
+}
                     } catch (e) {
                         console.error("Ошибка аутентификации:", e);
-                        setError(prev => ({ 
-                            ...prev, 
+setError(prev => ({ 
+                           ...prev, 
                             name: "Ошибка аутентификации", 
-                            message: `Не удалось авторизоваться в Firebase. (Код: ${e.code || 'UNKNOWN'}, Сообщение: ${e.message})` 
-                        }));
-                    }
-                };
+                            message: `Не удалось авторизоваться в Firebase. (Код: ${e.code |
 
-                const unsubscribe = onAuthStateChanged(auth, (user) => {
+| 
+'UNKNOWN'}, Сообщение: ${e.message})` 
+                        }));
+}
+                };
+const unsubscribe = onAuthStateChanged(auth, (user) => {
                     if (user) {
                         setUserId(user.uid);
                     } else {
                         setUserId(null); 
-                    }
+ 
+                   }
                     setAuthReady(true);
                 });
-
-                setupFirebase();
+setupFirebase();
                 return () => unsubscribe();
             }, [error]); 
 
@@ -512,97 +570,99 @@
                 // Сброс режимов редактирования при выходе из Admin
                 if (!isAdmin) {
                     setIsDeleteMode(false);
-                    setIsReorderMode(false);
+         
+           setIsReorderMode(false);
                 }
             }, [isAdmin]);
-
-            // Функция для открытия модала переименования
+// Функция для открытия модала переименования
             const handleOpenRenameModal = useCallback((album) => {
                 if (!isAdmin) return;
                 setAlbumToRename(album);
                 setIsRenameModalOpen(true);
             }, [isAdmin]);
-
-            // Функция для закрытия модала переименования
+// Функция для закрытия модала переименования
             const handleCloseRenameModal = useCallback(() => {
                 setIsRenameModalOpen(false);
                 setAlbumToRename(null);
-            }, []);
-
-            // --- ЛОГИКА АДМИНИСТРАТОРА (Login/Logout) ---
+            },);
+// --- ЛОГИКА АДМИНИСТРАТОРА (Login/Logout) ---
 const handleAdminLogin = async (email, password) => {
     if (!auth) {
         alertUser('Ошибка', 'Firebase Auth не инициализирован.');
-        return;
+return;
     }
 
     try {
         const userCredential = await signInWithEmailAndPassword(auth, email, password);
-        const user = userCredential.user;
+const user = userCredential.user;
 
         if (user.uid === ADMIN_UID) {
             setIsAdmin(true);
-            setIsLoginModalOpen(false);
+setIsLoginModalOpen(false);
             localStorage.setItem('isAdmin', 'true');
             alertUser('Успех', 'Вход Администратора выполнен успешно!');
         } else {
             await signOut(auth);
-            alertUser('Ошибка доступа', 'Этот аккаунт не имеет прав администратора.');
+alertUser('Ошибка доступа', 'Этот аккаунт не имеет прав администратора.');
         }
 
     } catch (e) {
         console.error("Ошибка входа администратора:", e);
-        alertUser('Ошибка входа', `Не удалось войти. Проверьте Email и Пароль. (${e.code})`);
+alertUser('Ошибка входа', `Не удалось войти. Проверьте Email и Пароль. (${e.code})`);
     }
 };
-
-            
-            // --------------------------------------------
+// --------------------------------------------
 
             // Функции навигации в модальном окне (пропускает разделители)
             const handleNavigation = useCallback((direction) => {
-                if (!enlargedImage || !selectedAlbum) return;
+                if (!enlargedImage ||!selectedAlbum) return;
 
                 const allContent = selectedAlbum.images;
-                const images = allContent.filter(item => item.type !== 'divider');
+                const images = allContent.filter(item => item.type!== 'divider');
 
-                if (!images || images.length === 0) return;
+ 
+               if (!images |
+
+| images.length === 0) return;
                 
                 const currentIndex = images.findIndex(img => img.timestamp === enlargedImage.timestamp);
                 if (currentIndex === -1) return;
 
                 let nextIndex;
-                if (direction === 'next') {
+   
+             if (direction === 'next') {
                     nextIndex = (currentIndex + 1) % images.length;
                 } else { // 'prev'
                     nextIndex = (currentIndex - 1 + images.length) % images.length;
-                }
+         
+       }
                 
                 const nextImage = images[nextIndex];
                 setEnlargedImage(nextImage);
-            }, [enlargedImage, selectedAlbum]);
+}, [enlargedImage, selectedAlbum]);
 
             const handleNextImage = useCallback(() => handleNavigation('next'), [handleNavigation]);
             const handlePrevImage = useCallback(() => handleNavigation('prev'), [handleNavigation]);
-            // --------------------------------------------------
+// --------------------------------------------------
 
             // Управление режимами редактирования
             const toggleDeleteMode = useCallback(() => {
-                if (!isAdmin) return; // ! Проверка Admin
-                setIsDeleteMode(prev => !prev);
+                if (!isAdmin) return; //! Проверка Admin
+                setIsDeleteMode(prev =>!prev);
                 if (!isDeleteMode) { 
-                    setIsReorderMode(false); // Отключаем переупорядочивание
+        
+            setIsReorderMode(false); // Отключаем переупорядочивание
                 }
-            }, [isDeleteMode, isAdmin]);
-
-            const toggleReorderMode = useCallback(() => {
-                if (!isAdmin) return; // ! Проверка Admin
-                setIsReorderMode(prev => !prev);
+            },);
+const toggleReorderMode = useCallback(() => {
+                if (!isAdmin) return; //! Проверка Admin
+                setIsReorderMode(prev =>!prev);
                 if (!isReorderMode) { 
                     setIsDeleteMode(false); // Отключаем удаление
-                }
-            }, [isReorderMode, isAdmin]);
-            // -----------------------------------------
+             
+   }
+            },);
+// -----------------------------------------
 
             const handleGoHome = useCallback(() => {
         saveScrollPosition();
@@ -610,7 +670,8 @@ const handleAdminLogin = async (email, password) => {
                 setCurrentView('home');
                 setIsDeleteMode(false); 
                 setIsReorderMode(false);
-            }, []); 
+         
+   },); 
 
             const handleOpenAlbum = useCallback((album) => {
         saveScrollPosition();
@@ -618,534 +679,581 @@ const handleAdminLogin = async (email, password) => {
                 setCurrentView('album');
                 setIsDeleteMode(false); 
                 setIsReorderMode(false);
-            }, []); 
-
-            const alertUser = (title, message) => {
+            },);
+const alertUser = (title, message) => {
                 // Простая реализация модального окна/сообщения
                 console.warn(`[ВНИМАНИЕ ${title}]: ${message}`);
-                // Используем DOM-манипуляцию для отображения сообщения вместо window.alert
-                if (typeof document !== 'undefined') {
+// Используем DOM-манипуляцию для отображения сообщения вместо window.alert
+                if (typeof document!== 'undefined') {
                     const tempDiv = document.createElement('div');
-                    tempDiv.innerHTML = `
+tempDiv.innerHTML = `
                         <div style="position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); background:white; padding:20px; border-radius:10px; box-shadow:0 4px 6px rgba(0,0,0,0.2); z-index:1000; max-width: 90vw; text-align: center; border: 2px solid #ef4444; font-family: sans-serif;">
                             <h4 style="font-weight: bold; color: #ef4444; margin-bottom: 10px;">${title}</h4>
-                            <p>${message}</p>
+                 
+           <p>${message}</p>
                             <button onclick="this.parentElement.remove()" style="margin-top: 15px; background: #6366f1; color: white; padding: 8px 15px; border: none; border-radius: 5px; cursor: pointer;">OK</button>
                         </div>
                     `;
-                    document.body.appendChild(tempDiv.firstChild);
+document.body.appendChild(tempDiv.firstChild);
                 }
             };
-
-
-            // --- 2. Получение данных об альбомах (Real-time Listener) ---
+// --- 2. Получение данных об альбомах (Real-time Listener) ---
             useEffect(() => {
                 // Чтение доступно только после успешной авторизации (наличия userId)
-                if (!db || !userId) {
+                if (!db ||!userId) {
                     if (!userId && authReady) {
-                        setLoading(false); 
+         
+               setLoading(false); 
                     }
                     return; 
                 }
 
                 setLoading(true);
 
-                // ИЗМЕНЕНО: Используем публичный путь
+           
+     // ИЗМЕНЕНО: Используем публичный путь
                 const collectionPath = `artifacts/${appId}/public/data/${PUBLIC_COLLECTION_NAME}`;
                 const q = query(collection(db, collectionPath));
 
                 const unsubscribe = onSnapshot(q, 
                     // 1. Success Callback
-                    (querySnapshot) => {
-                        const fetchedAlbums = [];
+         
+           (querySnapshot) => {
+                        const fetchedAlbums =;
                         querySnapshot.forEach((doc) => {
                             const data = doc.data();
-                            const images = Array.isArray(data.images) ? data.images : [];
-                            fetchedAlbums.push({ id: doc.id, ...data, images });
+   
+                         const images = Array.isArray(data.images)?
+data.images :;
+                            fetchedAlbums.push({ id: doc.id,...data, images });
                         });
                         
-                        fetchedAlbums.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
+                        fetchedAlbums.sort((a, b) => (b.createdAt?.seconds |
 
-                        setAlbums(fetchedAlbums);
+| 0) - (a.createdAt?.seconds |
+| 0));
+setAlbums(fetchedAlbums);
                         setLoading(false);
                         
                         setSelectedAlbum(prevSelectedAlbum => {
                             if (prevSelectedAlbum) {
                                 const updatedAlbum = fetchedAlbums.find(a => a.id === prevSelectedAlbum.id);
-                                if (updatedAlbum) {
+                           
+     if (updatedAlbum) {
                                     return updatedAlbum; 
                                 }
-                                // Если альбом был удален, возвращаемся на Главную
+                       
+         // Если альбом был удален, возвращаемся на Главную
                                 if (currentView === 'album') { 
                                     setCurrentView('home'); 
-                                    return null; 
+          
+                          return null; 
                                 }
                             }
-                            return prevSelectedAlbum; 
+            
+                return prevSelectedAlbum; 
                         });
-                    
-                    }, 
+}, 
                     // 2. Error Callback (перемещен из setSelectedAlbum)
                     (err) => { 
                         console.error("Ошибка получения данных Firestore:", err);
-                        setError({
+setError({
                             name: "Ошибка Загрузки Альбомов",
                             message: `Ошибка загрузки альбомов. Проверьте консоль. (${err.message})`
                         });
-                        setLoading(false);
+setLoading(false);
                     }
-                ); // Конец вызова onSnapshot
+                );
+// Конец вызова onSnapshot
 
                 return () => unsubscribe();
-            }, [userId, authReady, currentView]); // Зависимость от userId гарантирует, что мы ждем успешного входа
+},); // Зависимость от userId гарантирует, что мы ждем успешного входа
 
             // --- 3. CRUD-функции (Только для Администратора) ---
             
             // **ФУНКЦИЯ ПЕРЕИМЕНОВАНИЯ АЛЬБОМА**
             const renameAlbum = async (albumId, newName) => {
                 if (!isAdmin) {
-                    alertUser('Ошибка доступа', 'Вы должны быть Администратором для переименования альбомов.');
-                    return false;
+    
+                alertUser('Ошибка доступа', 'Вы должны быть Администратором для переименования альбомов.');
+return false;
                 }
-                if (!albumId || !newName.trim() || !db) {
+                if (!albumId ||!newName.trim() ||!db) {
                     console.error("FIREBASE ERROR: Album ID or DB instance is missing for renameAlbum.");
-                    alertUser('Критическая ошибка', 'Не удалось переименовать альбом: не инициализирована база данных.');
+alertUser('Критическая ошибка', 'Не удалось переименовать альбом: не инициализирована база данных.');
                     return false;
-                }
+}
 
                 try {
                     const collectionPath = `artifacts/${appId}/public/data/${PUBLIC_COLLECTION_NAME}`;
-                    const albumRef = doc(db, collectionPath, albumId);
+const albumRef = doc(db, collectionPath, albumId);
                     
                     await updateDoc(albumRef, {
                         name: newName.trim(),
                     });
-
-                    console.log(`Альбом ${albumId} переименован в "${newName}"`);
+console.log(`Альбом ${albumId} переименован в "${newName}"`);
                     handleCloseRenameModal();
                     return true;
 
                 } catch (e) {
                     console.error("Ошибка при переименовании альбома:", e);
-                    alertUser('Ошибка', 'Не удалось переименовать альбом.');
+alertUser('Ошибка', 'Не удалось переименовать альбом.');
                     return false;
                 }
             };
-            
-            // **ОБНОВЛЕНИЕ ПОДПИСИ ФОТОГРАФИИ**
+// **ОБНОВЛЕНИЕ ПОДПИСИ ФОТОГРАФИИ**
             const updatePhotoCaption = async (albumId, photoTimestamp, newCaption) => {
-                if (!isAdmin) { // ! Проверка Admin
+                if (!isAdmin) { //!
+Проверка Admin
                     alertUser('Ошибка доступа', 'Вы должны быть Администратором для редактирования подписей.');
-                    return;
+return;
                 }
-                if (!albumId || !db) {
+                if (!albumId ||!db) {
                     console.error("FIREBASE ERROR: Album ID or DB instance is missing for updatePhotoCaption.");
-                    alertUser('Критическая ошибка', 'Не удалось сохранить подпись: не инициализирована база данных.');
+alertUser('Критическая ошибка', 'Не удалось сохранить подпись: не инициализирована база данных.');
                     return;
-                }
+}
 
                 try {
                     const collectionPath = `artifacts/${appId}/public/data/${PUBLIC_COLLECTION_NAME}`;
-                    const albumRef = doc(db, collectionPath, albumId);
+const albumRef = doc(db, collectionPath, albumId);
                     const currentAlbum = albums.find(a => a.id === albumId);
-                    
-                    if (currentAlbum) {
+if (currentAlbum) {
                         const updatedImages = currentAlbum.images.map(item => {
-                            if (item.timestamp === photoTimestamp && item.type !== 'divider') { 
-                                return { ...item, caption: newCaption.trim() };
+                            if (item.timestamp === photoTimestamp && item.type!== 'divider') { 
+                                
+return {...item, caption: newCaption.trim() };
                             }
                             return item;
                         });
-                        
-                        await updateDoc(albumRef, {
+await updateDoc(albumRef, {
                             images: updatedImages,
                         });
-
-                        setEnlargedImage(prev => {
+setEnlargedImage(prev => {
                             if (prev && prev.timestamp === photoTimestamp) {
-                                return { ...prev, caption: newCaption.trim() };
-                            }
+                                return {...prev, caption: newCaption.trim() };
+                           
+ }
                             return prev;
                         });
-                        
-                        console.log(`Подпись для фото ${photoTimestamp} обновлена: "${newCaption}"`);
+console.log(`Подпись для фото ${photoTimestamp} обновлена: "${newCaption}"`);
                     }
 
                 } catch (e) {
                     console.error("Ошибка при обновлении подписи:", e);
-                    alertUser('Ошибка', 'Не удалось сохранить подпись.');
+alertUser('Ошибка', 'Не удалось сохранить подпись.');
                 }
             };
-            
-            // **УДАЛЕНИЕ ЭЛЕМЕНТА (ФОТО ИЛИ РАЗДЕЛИТЕЛЬ)**
+// **УДАЛЕНИЕ ЭЛЕМЕНТА (ФОТО ИЛИ РАЗДЕЛИТЕЛЬ)**
             const deletePhoto = async (albumId, itemToDelete) => {
-        saveScrollPosition();
-                if (!isAdmin) { // ! Проверка Admin
+        saveScrollPosition(); // [3] Сохраняем позицию прокрутки до начала операции
+if (!isAdmin) { //! Проверка Admin
                     alertUser('Ошибка доступа', 'Вы должны быть Администратором для удаления элементов.');
-                    return;
+return;
                 }
-                if (!albumId || !db) { 
+                if (!albumId ||!db) { 
                     console.error("FIREBASE ERROR: Album ID or DB instance is missing for deletePhoto.");
-                    alertUser('Критическая ошибка', 'Не удалось удалить элемент: не инициализирована база данных.');
+alertUser('Критическая ошибка', 'Не удалось удалить элемент: не инициализирована база данных.');
                     return;
-                }
+}
 
                 try {
                     const collectionPath = `artifacts/${appId}/public/data/${PUBLIC_COLLECTION_NAME}`;
-                    const albumRef = doc(db, collectionPath, albumId);
+const albumRef = doc(db, collectionPath, albumId);
                     const currentAlbum = albums.find(a => a.id === albumId);
-                    
-                    if (currentAlbum) {
+if (currentAlbum) {
                         // Фильтруем элемент по уникальному timestamp
-                        const updatedImages = currentAlbum.images.filter(item => item.timestamp !== itemToDelete.timestamp);
-                        
-                        await updateDoc(albumRef, {
+                        const updatedImages = currentAlbum.images.filter(item => item.timestamp!== itemToDelete.timestamp);
+await updateDoc(albumRef, {
                             images: updatedImages,
                         });
-                        
-                        console.log(`Элемент (тип: ${itemToDelete.type || 'photo'}) ${itemToDelete.timestamp} удален.`);
+console.log(`Элемент (тип: ${itemToDelete.type |
+
+| 'photo'}) ${itemToDelete.timestamp} удален.`);
                         
                         // Закрываем модал, если удаленный элемент был увеличен
                         if (enlargedImage && enlargedImage.timestamp === itemToDelete.timestamp) {
-                            saveScrollPosition();
-        setEnlargedImage(null);
+                            // saveScrollPosition(); // УДАЛЕНО: сохранение уже произошло выше, лишнее
+                            setEnlargedImage(null);
                         }
                     }
 
                 } catch (e) {
                     console.error("Ошибка при удалении элемента:", e);
-                    alertUser('Ошибка', 'Не удалось удалить элемент.');
+alertUser('Ошибка', 'Не удалось удалить элемент.');
                 }
             };
-
-
-            // **ИЗМЕНЕНИЕ ПОРЯДКА ФОТОГРАФИЙ И РАЗДЕЛИТЕЛЕЙ (DRAG AND DROP)**
+// **ИЗМЕНЕНИЕ ПОРЯДКА ФОТОГРАФИЙ И РАЗДЕЛИТЕЛЕЙ (DRAG AND DROP)**
             const handleDragStart = useCallback((e, uniqueId) => {
-                if (!isReorderMode || !isAdmin) return; // ! Проверка Admin
+                if (!isReorderMode ||!isAdmin) return; //! Проверка Admin
                 dragItemUniqueId.current = uniqueId;
                 e.dataTransfer.effectAllowed = "move";
-                // Установка Drag Image для лучшего UX
+              
+  // Установка Drag Image для лучшего UX
                 if (e.dataTransfer.setDragImage) {
-                     const dragElement = e.target.closest('div').querySelector('img') || e.target.closest('div').querySelector('h2');
+                     const dragElement = e.target.closest('div').querySelector('img') |
+
+| e.target.closest('div').querySelector('h2');
                      if(dragElement) e.dataTransfer.setDragImage(dragElement, 10, 10);
                 }
-            }, [isReorderMode, isAdmin]);
+        
+    },);
 
             const handleDragEnter = useCallback((e, uniqueId) => {
-                if (!isReorderMode || !isAdmin) return; // ! Проверка Admin
+                if (!isReorderMode ||!isAdmin) return; //! Проверка Admin
                 dragOverItemUniqueId.current = uniqueId;
-            }, [isReorderMode, isAdmin]);
-
-            const handleDragOver = useCallback((e) => {
-                if (!isReorderMode || !isAdmin) return; // ! Проверка Admin
+            },);
+const handleDragOver = useCallback((e) => {
+                if (!isReorderMode ||!isAdmin) return; //! Проверка Admin
                 e.preventDefault();
-            }, [isReorderMode, isAdmin]);
-
+            },);
+            
+            // >>>>>>>>>>>>>>>>>> ИСПРАВЛЕНИЕ #4: Сохранение прокрутки перед изменением порядка
             const handleDrop = useCallback(async (e) => {
+                saveScrollPosition(); // [3] Сохраняем позицию прокрутки до начала операции
                 if (!isAdmin) {
                     alertUser('Ошибка доступа', 'Вы должны быть Администратором для изменения порядка.');
                     dragItemUniqueId.current = null;
                     dragOverItemUniqueId.current = null;
-                    return;
+    
+                return;
                 }
                 if (!isReorderMode) { 
                     return; 
                 }
-                if (!selectedAlbum || !db) { 
+            
+    if (!selectedAlbum ||!db) { 
                     console.error("FIREBASE ERROR: Album or DB instance is missing for handleDrop.");
                     alertUser('Критическая ошибка', 'Не удалось изменить порядок: не инициализирован альбом или база данных.');
                     dragItemUniqueId.current = null;
-                    dragOverItemUniqueId.current = null;
+         
+           dragOverItemUniqueId.current = null;
                     return;
                 }
 
 
                 const draggedId = dragItemUniqueId.current;
                 const targetId = dragOverItemUniqueId.current;
+if (draggedId === null |
 
-                if (draggedId === null || targetId === null || draggedId === targetId) {
+| targetId === null |
+| draggedId === targetId) {
                     dragItemUniqueId.current = null;
-                    dragOverItemUniqueId.current = null;
+dragOverItemUniqueId.current = null;
                     return;
                 }
 
                 const collectionPath = `artifacts/${appId}/public/data/${PUBLIC_COLLECTION_NAME}`;
-                const albumRef = doc(db, collectionPath, selectedAlbum.id);
+const albumRef = doc(db, collectionPath, selectedAlbum.id);
                 const list = [...selectedAlbum.images];
 
                 const draggedIndex = list.findIndex(item => item.timestamp === draggedId);
-                const targetIndex = list.findIndex(item => item.timestamp === targetId);
+const targetIndex = list.findIndex(item => item.timestamp === targetId);
 
-                if (draggedIndex === -1 || targetIndex === -1) {
+                if (draggedIndex === -1 |
+
+| targetIndex === -1) {
                     console.error("Не удалось найти элемент по ID при перетаскивании.");
-                    dragItemUniqueId.current = null;
+dragItemUniqueId.current = null;
                     dragOverItemUniqueId.current = null;
                     return;
                 }
 
                 const itemToMove = list[draggedIndex];
-                list.splice(draggedIndex, 1); 
+list.splice(draggedIndex, 1); 
                 list.splice(targetIndex, 0, itemToMove); 
 
                 try {
                     await updateDoc(albumRef, {
                         images: list
                     });
-                    console.log("Порядок элементов галереи обновлен в Firestore.");
+console.log("Порядок элементов галереи обновлен в Firestore.");
                 } catch (error) {
                     console.error("Ошибка обновления порядка:", error);
-                    alertUser('Ошибка', 'Не удалось сохранить новый порядок элементов.');
+alertUser('Ошибка', 'Не удалось сохранить новый порядок элементов.');
                 }
                 
                 dragItemUniqueId.current = null;
-                dragOverItemUniqueId.current = null;
-            }, [isReorderMode, isAdmin, selectedAlbum, db]);
+dragOverItemUniqueId.current = null;
+            },);
             // ------------------------------------------------------------------
 
             // **СОЗДАНИЕ РАЗДЕЛИТЕЛЯ**
             const addDivider = async (albumId, text) => {
-                if (!isAdmin) { // ! Проверка Admin
+                if (!isAdmin) { //!
+Проверка Admin
                     alertUser('Ошибка доступа', 'Вы должны быть Администратором для добавления разделителей.');
-                    return;
+return;
                 }
-                if (!albumId || !text.trim() || !db) { // ! Проверка db
+                if (!albumId ||!text.trim() ||!db) { //!
+Проверка db
                     alertUser('Критическая ошибка', 'Не удалось добавить разделитель: не инициализирована база данных.');
-                    return;
+return;
                 }
 
                 try {
                     const collectionPath = `artifacts/${appId}/public/data/${PUBLIC_COLLECTION_NAME}`;
-                    const albumRef = doc(db, collectionPath, albumId);
+const albumRef = doc(db, collectionPath, albumId);
                     
                     const newDividerEntry = {
                         type: 'divider',
                         timestamp: Date.now(), // Уникальный ID
                         text: text.trim(), 
-                    };
+            
+        };
                     
                     await updateDoc(albumRef, {
                         images: arrayUnion(newDividerEntry) 
                     });
-
-                    setIsAddDividerModalOpen(false);
+setIsAddDividerModalOpen(false);
                     console.log(`Разделитель "${text}" добавлен в альбом ${albumId}.`);
 
                 } catch (e) {
                     console.error("Ошибка при добавлении разделителя:", e);
-                    alertUser('Ошибка', 'Не удалось добавить текстовый разделитель.');
+alertUser('Ошибка', 'Не удалось добавить текстовый разделитель.');
                 }
             };
-
-
-            // Создание нового альбома
+// Создание нового альбома
             const createNewAlbum = async (name) => {
-                if (!isAdmin) { // ! Проверка Admin
+                if (!isAdmin) { //!
+Проверка Admin
                     alertUser('Ошибка доступа', 'Вы должны быть Администратором для создания альбомов.');
-                    return;
+return;
                 }
-                if (!name.trim() || !db) { // ! Проверка db
+                if (!name.trim() ||!db) { //!
+Проверка db
                     alertUser('Критическая ошибка', 'Не удалось создать альбом: не инициализирована база данных.');
-                    return;
+return;
                 }
 
                 const albumData = {
                     name: name.trim(),
                     createdAt: serverTimestamp(),
-                    images: [], 
-                    previewUrl: null 
+                    images:, 
+                
+    previewUrl: null 
                 };
-                try {
+try {
                     const collectionPath = `artifacts/${appId}/public/data/${PUBLIC_COLLECTION_NAME}`;
-                    await addDoc(collection(db, collectionPath), albumData);
+await addDoc(collection(db, collectionPath), albumData);
                     setIsAddAlbumModalOpen(false);
                     console.log(`Альбом "${name}" создан.`);
                 } catch (e) {
                     console.error("Ошибка при создании альбома:", e);
-                    alertUser('Ошибка', 'Не удалось создать альбом.');
+alertUser('Ошибка', 'Не удалось создать альбом.');
                 }
             };
-
-            // Добавление ссылки на фото в альбом
+// Добавление ссылки на фото в альбом
             const addPhotoLink = async (albumId, url, aspectRatio = 1.0) => {
-                if (!isAdmin) { // ! Проверка Admin
+                if (!isAdmin) { //!
+Проверка Admin
                     alertUser('Ошибка доступа', 'Вы должны быть Администратором для добавления фото.');
-                    return;
+return;
                 }
-                if (!albumId || !url.trim() || !db) { // ! Проверка db
+                if (!albumId ||!url.trim() ||!db) { //!
+Проверка db
                     alertUser('Критическая ошибка', 'Не удалось добавить фото: не инициализирована база данных.');
-                    return;
+return;
                 }
 
                 try {
                     const collectionPath = `artifacts/${appId}/public/data/${PUBLIC_COLLECTION_NAME}`;
-                    const albumRef = doc(db, collectionPath, albumId);
+const albumRef = doc(db, collectionPath, albumId);
                     
                     const newImageEntry = {
                         url: url.trim(),
                         type: 'photo',
                         timestamp: Date.now(), // Уникальный ID
-                        aspectRatio: parseFloat(aspectRatio) > 0 ? parseFloat(aspectRatio) : 1.0, 
+             
+           aspectRatio: parseFloat(aspectRatio) > 0?
+parseFloat(aspectRatio) : 1.0, 
                         caption: '' 
                     };
-                    
-                    // 1. Обновление Firestore
+// 1. Обновление Firestore
                     await updateDoc(albumRef, {
                         images: arrayUnion(newImageEntry)
                     });
-
-                    setIsAddPhotoModalOpen(false);
+setIsAddPhotoModalOpen(false);
                     console.log(`Ссылка добавлена в альбом ${albumId}.`);
 
                 } catch (e) {
                     console.error("Ошибка при добавлении ссылки:", e);
-                    alertUser('Ошибка', 'Не удалось добавить ссылку на фото. Убедитесь, что ссылка корректна.');
-                }
+alertUser('Ошибка', 'Не удалось добавить ссылку на фото. Убедитесь, что ссылка корректна.');
+}
             };
-
-            // --- Вспомогательные компоненты ---
+// --- Вспомогательные компоненты ---
             const AlbumCard = ({ album }) => {
                 // Находим самое первое фото, игнорируя любые сохраненные previewUrl
-                const firstPhoto = album.images.find(item => item.type !== 'divider' && item.url);
-                const previewUrl = firstPhoto ? firstPhoto.url : null;
+                const firstPhoto = album.images.find(item => item.type!== 'divider' && item.url);
+const previewUrl = firstPhoto? firstPhoto.url : null;
                 
-                const imageCount = album.images.filter(item => item.type !== 'divider').length;
-                
-                return (
+                const imageCount = album.images.filter(item => item.type!== 'divider').length;
+return (
                     <div className="relative">
                         <div 
                             onClick={() => handleOpenAlbum(album)}
-                            className="bg-white rounded-xl shadow-lg hover:shadow-xl transition-shadow cursor-pointer overflow-hidden transform hover:scale-[1.02] active:scale-100 duration-200 ease-in-out"
+                       
+     className="bg-white rounded-xl shadow-lg hover:shadow-xl transition-shadow cursor-pointer overflow-hidden transform hover:scale-[1.02] active:scale-100 duration-200 ease-in-out"
                         >
                             <div className="w-full h-48 bg-gray-200 flex items-center justify-center relative">
-                                {previewUrl ? (
+                         
+       {previewUrl? (
                                     <img 
                                         src={previewUrl} 
-                                        alt={`Превью ${album.name}`} 
+             
+                           alt={`Превью ${album.name}`} 
                                         className="w-full h-full object-cover"
-                                        onError={(e) => { e.target.onerror = null; e.target.src = "https://placehold.co/600x400/CCCCCC/333333?text=Ошибка+загрузки"; }}
+                             
+           onError={(e) => { e.target.onerror = null; e.target.src = "https://placehold.co/600x400/CCCCCC/333333?text=Ошибка+загрузки"; }}
                                     />
                                 ) : (
-                                    <ImageIcon className="w-1/3 h-1/3 text-gray-500" />
+          
+                          <ImageIcon className="w-1/3 h-1/3 text-gray-500" />
                                 )}
                             </div>
-                            <div className="p-4">
+          
+                  <div className="p-4">
                                 <h3 className="font-semibold text-lg text-gray-800 truncate" title={album.name}>{album.name}</h3>
-                                <p className="text-sm text-gray-500 mt-1">{imageCount} {imageCount === 1 ? 'фото' : (imageCount > 1 && imageCount < 5 ? 'фото' : 'фотографий')}</p>
+                                <p className="text-sm text-gray-500 mt-1">{imageCount} {imageCount === 1?
+'фото' : (imageCount > 1 && imageCount < 5? 'фото' : 'фотографий')}</p>
                             </div>
                         </div>
                         
-                        {/* Кнопка переименования (Только для Admin) */}
+            
+            {/* Кнопка переименования (Только для Admin) */}
                         {isAdmin && (
                             <button
-                                onClick={(e) => { 
+                            
+    onClick={(e) => { 
                                     e.stopPropagation(); 
                                     handleOpenRenameModal(album);
-                                }}
+                    
+            }}
                                 className="absolute top-2 right-2 p-1 bg-white rounded-full shadow-lg text-indigo-600 hover:bg-indigo-50 transition"
                                 title="Переименовать альбом"
-                            >
+              
+              >
                                 <Edit className="h-4 w-4" />
                             </button>
-                        )}
+                       
+ )}
                     </div>
                 );
-            };
+};
 
             const LoadingSpinner = () => (
                 <div className="flex justify-center items-center h-full min-h-[300px]">
                     <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
                     <p className="ml-4 text-gray-600">Загрузка данных...</p>
                 </div>
-            );
+        
+    );
             
             const CalculationSpinner = () => (
                 <div className="flex justify-center items-center h-full min-h-[100px] my-8">
                      <Loader className="animate-spin text-indigo-500 mr-3" size={24} />
                     <p className="text-gray-600">Расчет макета галереи...</p>
                 </div>
-            );
-
-            const Modal = ({ isOpen, onClose, title, children }) => {
+   
+         );
+const Modal = ({ isOpen, onClose, title, children }) => {
                 if (!isOpen) return null;
-                
-                return (
+return (
                     <div className="fixed inset-0 z-50 bg-black bg-opacity-50 flex justify-center items-center p-4" onClick={onClose}>
                         <div 
                             className="bg-white rounded-xl shadow-2xl w-full max-w-md p-6 animate-fade-in-up"
-                            onClick={(e) => e.stopPropagation()}
+          
+                  onClick={(e) => e.stopPropagation()}
                         >
                             <div className="flex justify-between items-center border-b pb-3 mb-4">
-                                <h2 className="text-xl font-bold text-gray-800">{title}</h2>
+                      
+          <h2 className="text-xl font-bold text-gray-800">{title}</h2>
                                 <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
                                     <X size={24} />
-                                </button>
+              
+                  </button>
                             </div>
                             {children}
                         </div>
-                    </div>
+  
+                  </div>
                 );
-            };
+};
             
             // --- Модал для переименования альбома ---
             const RenameAlbumModal = () => {
-                const [newName, setNewName] = useState(albumToRename?.name || '');
-                const [isSaving, setIsSaving] = useState(false);
+                const [newName, setNewName] = useState(albumToRename?.name |
+
+| '');
+const = useState(false);
 
                 useEffect(() => {
-                    setNewName(albumToRename?.name || '');
-                }, [albumToRename]);
-                
-                const handleSubmit = async (e) => {
+                    setNewName(albumToRename?.name |
+
+| '');
+                },);
+const handleSubmit = async (e) => {
                     e.preventDefault();
-                    if (newName.trim() && albumToRename) {
+if (newName.trim() && albumToRename) {
                         setIsSaving(true);
-                        await renameAlbum(albumToRename.id, newName);
+await renameAlbum(albumToRename.id, newName);
                         setIsSaving(false);
                     }
                 };
+return (
+                    <Modal isOpen={isRenameModalOpen} onClose={handleCloseRenameModal} title={`Переименовать альбом "${albumToRename?.name |
 
-                return (
-                    <Modal isOpen={isRenameModalOpen} onClose={handleCloseRenameModal} title={`Переименовать альбом "${albumToRename?.name || ''}"`}>
+| ''}"`}>
                         <form onSubmit={handleSubmit}>
                             <input
-                                type="text"
+                   
+             type="text"
                                 value={newName}
                                 onChange={(e) => setNewName(e.target.value)}
-                                placeholder="Введите новое название альбома"
+                     
+           placeholder="Введите новое название альбома"
                                 className="w-full p-3 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500"
                                 required
-                            />
+                
+            />
                             <div className="flex justify-end mt-4 space-x-3">
                                 <button type="button" onClick={handleCloseRenameModal} className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition">
-                                    Отмена
+             
+                       Отмена
                                 </button>
                                 <button 
-                                    type="submit" 
-                                    disabled={isSaving || !newName.trim() || newName.trim() === albumToRename?.name}
+            
+                        type="submit" 
+                                    disabled={isSaving ||
+!newName.trim() |
+
+| newName.trim() === albumToRename?.name}
                                     className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 transition shadow-md disabled:bg-indigo-400"
                                 >
-                                    {isSaving ? 'Сохранение...' : 'Сохранить'}
+                  
+                  {isSaving?
+'Сохранение...' : 'Сохранить'}
                                 </button>
                             </div>
                         </form>
-                    </Modal>
+              
+      </Modal>
                 );
-            };
+};
             // ----------------------------------------------
             
             // --- Модал для входа администратора ---
 const AdminLoginModal = () => {
 
     const [email, setEmail] = useState('');
-    const [password, setPassword] = useState('');
+const [password, setPassword] = useState('');
 
     const handleSubmit = (e) => {
         e.preventDefault();
-        handleAdminLogin(email, password); // функция из app.jsx
+handleAdminLogin(email, password); // функция из app.jsx
         setPassword('');
     };
-
-    return (
+return (
         <Modal
             isOpen={isLoginModalOpen}
             onClose={() => setIsLoginModalOpen(false)}
@@ -1154,43 +1262,51 @@ const AdminLoginModal = () => {
             <form onSubmit={handleSubmit} className="space-y-4">
 
                 {/* Поле для email */}
-                <input
+          
+      <input
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="Введите email администратора"
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500"
+          
+          className="w-full p-3 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500"
                     required
                 />
 
                 {/* Поле для пароля */}
                 <input
-                    type="password"
+            
+        type="password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="Введите пароль администратора"
                     className="w-full p-3 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500"
-                    required
+  
+                  required
                 />
 
                 <div className="flex justify-end mt-4 space-x-3">
                     <button
                         type="button"
-                        onClick={() => setIsLoginModalOpen(false)}
+  
+                      onClick={() => setIsLoginModalOpen(false)}
                         className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition"
                     >
-                        Отмена
+                        
+Отмена
                     </button>
                     <button
                         type="submit"
                         className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 transition shadow-md"
-                    >
+   
+                 >
                         Войти
                     </button>
                 </div>
             </form>
         </Modal>
-    );
+   
+ );
 };
 
             // ----------------------------------------------
@@ -1198,115 +1314,124 @@ const AdminLoginModal = () => {
 
             const AddAlbumModal = () => {
                 const [albumName, setAlbumName] = useState('');
-                
-                const handleSubmit = (e) => {
+const handleSubmit = (e) => {
                     e.preventDefault();
-                    if (albumName.trim()) {
+if (albumName.trim()) {
                         createNewAlbum(albumName);
-                    }
+}
                 };
-
-                return (
+return (
                     <Modal isOpen={isAddAlbumModalOpen} onClose={() => setIsAddAlbumModalOpen(false)} title="Создать новый альбом">
                         <form onSubmit={handleSubmit}>
                             <input
-                                type="text"
+                   
+             type="text"
                                 value={albumName}
                                 onChange={(e) => setAlbumName(e.target.value)}
-                                placeholder="Введите название альбома"
+                     
+           placeholder="Введите название альбома"
                                 className="w-full p-3 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500"
                                 required
-                            />
+                 
+           />
                             <div className="flex justify-end mt-4 space-x-3">
                                 <button type="button" onClick={() => setIsAddAlbumModalOpen(false)} className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition">
-                                    Отмена
+            
+                        Отмена
                                 </button>
                                 <button type="submit" className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 transition shadow-md">
-                                    Создать
+ 
+                                   Создать
                                 </button>
                             </div>
-                        </form>
+     
+                   </form>
                     </Modal>
                 );
-            };
+};
 
             const AddDividerModal = () => {
-                const [dividerText, setDividerText] = useState('');
-                
-                const handleSubmit = (e) => {
+                const = useState('');
+const handleSubmit = (e) => {
                     e.preventDefault();
-                    if (dividerText.trim() && selectedAlbum) {
+if (dividerText.trim() && selectedAlbum) {
                         addDivider(selectedAlbum.id, dividerText);
-                        setDividerText('');
+setDividerText('');
                     }
                 };
-
-                return (
+return (
                     <Modal isOpen={isAddDividerModalOpen} onClose={() => setIsAddDividerModalOpen(false)} title="Добавить текстовый разделитель">
                         <form onSubmit={handleSubmit}>
                             <label className="block text-sm font-medium text-gray-700 mb-1">Текст главы/раздела</label>
-                            <input
+             
+               <input
                                 type="text"
                                 value={dividerText}
-                                onChange={(e) => setDividerText(e.target.value)}
-                                placeholder="Глава ..."
+                     
+           onChange={(e) => setDividerText(e.target.value)}
+                                placeholder="Глава..."
                                 className="w-full p-3 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500"
-                                required
+                
+                required
                             />
                             <div className="flex justify-end mt-4 space-x-3">
-                                <button type="button" onClick={() => setIsAddDividerModalOpen(false)} className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition">
+                        
+        <button type="button" onClick={() => setIsAddDividerModalOpen(false)} className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition">
                                     Отмена
                                 </button>
-                                <button type="submit" className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 transition shadow-md">
+           
+                     <button type="submit" className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 transition shadow-md">
                                     Добавить разделитель
-                                </button>
+                               
+ </button>
                             </div>
                         </form>
                     </Modal>
                 );
-            };
+};
 
 
             const AddPhotoModal = () => {
                 const [photoUrl, setPhotoUrl] = useState('');
-                const [aspectRatio, setAspectRatio] = useState('1.0');
-                const [selectedAlbumId, setSelectedAlbumId] = useState('');
+const = useState('1.0');
+                const = useState('');
                 const [previewImage, setPreviewImage] = useState(null);
-
-                useEffect(() => {
-                    if (albums.length > 0 && !selectedAlbumId) {
+useEffect(() => {
+                    if (albums.length > 0 &&!selectedAlbumId) {
                         if (currentView === 'album' && selectedAlbum) {
                             setSelectedAlbumId(selectedAlbum.id);
-                        } else {
-                            setSelectedAlbumId(albums[0].id);
+              
+          } else {
+                            setSelectedAlbumId(albums.id);
                         }
                     }
-                }, [albums, selectedAlbumId, currentView, selectedAlbum]);
+                
+}, [albums, selectedAlbumId, currentView, selectedAlbum]);
 
                 const handleSubmit = (e) => {
                     e.preventDefault();
-                    if (selectedAlbumId && photoUrl.trim()) {
-                        const ratio = parseFloat(aspectRatio.replace(',', '.')); 
+if (selectedAlbumId && photoUrl.trim()) {
+                        const ratio = parseFloat(aspectRatio.replace(',', '.'));
+if (isNaN(ratio) |
 
-                        if (isNaN(ratio) || ratio <= 0) {
+| ratio <= 0) {
                              alertUser('Ошибка', 'Некорректное соотношение сторон. Введите число > 0.');
-                             return;
+return;
                         }
                         
                         addPhotoLink(selectedAlbumId, photoUrl, ratio);
-                        setPhotoUrl('');
+setPhotoUrl('');
                         setAspectRatio('1.0');
                         setPreviewImage(null);
                     }
                 };
-
-                const handleUrlChange = (e) => {
+const handleUrlChange = (e) => {
                     const url = e.target.value;
-                    setPhotoUrl(url);
+setPhotoUrl(url);
                     setPreviewImage(null); 
                     if (url.startsWith('http')) {
                         setPreviewImage(url);
-                    }
+}
                 };
 // --- АВТО-РАСЧЁТ ПРОПОРЦИЙ ---
 useEffect(() => {
@@ -1320,544 +1445,698 @@ useEffect(() => {
             console.log(`Авто-пропорции определены: ${ratio}`);
         }
     };
-    img.onerror = () => {
+    img.onerror 
+= () => {
         console.warn("Не удалось определить пропорции изображения.");
     };
     img.src = previewImage;
 }, [previewImage]);
-
-                return (
+return (
                     <Modal isOpen={isAddPhotoModalOpen} onClose={() => setIsAddPhotoModalOpen(false)} title="Добавить фото по ссылке">
                         <form onSubmit={handleSubmit}>
                             <div className="space-y-4">
-                                <div>
+                 
+               <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-1">URL изображения (Imgur, GitHub и т.д.)</label>
                                     <input
-                                        type="url"
+   
+                                     type="url"
                                         value={photoUrl}
-                                        onChange={handleUrlChange}
+                       
+                 onChange={handleUrlChange}
                                         placeholder="https://i.imgur.com/your-image.jpg"
-                                        className="w-full p-3 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500"
+                                        className="w-full p-3 border 
+border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500"
                                         required
                                     />
-                                </div>
+                     
+           </div>
                                 
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Соотношение сторон (Ширина/Высота)</label>
+                         
+           <label className="block text-sm font-medium text-gray-700 mb-1">Соотношение сторон (Ширина/Высота)</label>
                                     <input
                                         type="text"
-                                        value={aspectRatio}
+      
+                                  value={aspectRatio}
                                         onChange={(e) => setAspectRatio(e.target.value)}
-                                        placeholder="1.0 (для квадрата) или 1.5 (для 3:2)"
+                        
+                placeholder="1.0 (для квадрата) или 1.5 (для 3:2)"
                                         className="w-full p-3 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500"
-                                        required
+                                
+        required
                                     />
                                     <p className="text-xs text-gray-500 mt-1">
-                                        Обязательно укажите число: 1.0 (квадрат), 1.77 (16:9), 0.56 (9:16). 
-                                    </p>
+                 
+                       Обязательно укажите число: 1.0 (квадрат), 1.77 (16:9), 0.56 (9:16).
+</p>
                                 </div>
                                 
                                 {previewImage && (
-                                    <div className="p-3 bg-gray-50 rounded-lg border border-gray-200">
+  
+                                  <div className="p-3 bg-gray-50 rounded-lg border border-gray-200">
                                         <p className="text-xs text-gray-600 mb-2">Предпросмотр:</p>
-                                        <img 
+                  
+                      <img 
                                             src={previewImage} 
-                                            alt="Превью" 
+                                
+            alt="Превью" 
                                             className="w-full max-h-32 object-contain rounded"
-                                            onError={(e) => { e.target.onerror = null; setPreviewImage(null); console.log("Не удалось загрузить превью. Проверьте ссылку."); }}
+                                        
+    onError={(e) => { e.target.onerror = null; setPreviewImage(null); console.log("Не удалось загрузить превью. Проверьте ссылку."); }}
                                         />
                                     </div>
-                                )}
+       
+                         )}
 
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-1">Выбрать альбом</label>
-                                    <select
+ 
+                                   <select
                                         value={selectedAlbumId}
-                                        onChange={(e) => setSelectedAlbumId(e.target.value)}
+                         
+               onChange={(e) => setSelectedAlbumId(e.target.value)}
                                         className="w-full p-3 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 bg-white"
-                                        required
+                                    
+    required
                                     >
                                         {albums.map(album => (
-                                            <option key={album.id} value={album.id}>{album.name}</option>
+                  
+                          <option key={album.id} value={album.id}>{album.name}</option>
                                         ))}
-                                    </select>
+                                
+    </select>
                                     {albums.length === 0 && <p className="text-red-500 text-xs mt-1">Создайте альбом, чтобы добавить фото.</p>}
                                 </div>
-                            </div>
+                 
+           </div>
 
                             <div className="flex justify-end mt-6 space-x-3">
                                 <button type="button" onClick={() => setIsAddPhotoModalOpen(false)} className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition">
-                                    Отмена
+            
+                        Отмена
                                 </button>
                                 <button 
-                                    type="submit" 
-                                    disabled={albums.length === 0 || !aspectRatio || isNaN(parseFloat(aspectRatio.replace(',', '.'))) || parseFloat(aspectRatio.replace(',', '.')) <= 0} 
+           
+                         type="submit" 
+                                    disabled={albums.length === 0 ||
+!aspectRatio |
+
+| isNaN(parseFloat(aspectRatio.replace(',', '.'))) |
+| parseFloat(aspectRatio.replace(',', '.')) <= 0} 
                                     className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 transition shadow-md disabled:bg-indigo-400"
                                 >
-                                    Добавить фото
+             
+                       Добавить фото
                                 </button>
                             </div>
-                        </form>
+                
+        </form>
                     </Modal>
                 );
-            };
+};
             
             // Вид: Сетка фото в альбоме (Justified Gallery)
             const AlbumPhotoView = () => {
                 if (!selectedAlbum) return <HomeView />;
-
-                const albumRef = useRef(null);
-                const [containerWidth, setContainerWidth] = useState(0);
+const albumRef = useRef(null);
+                const = useState(0);
 
                 const updateWidth = useCallback(() => {
                     if (albumRef.current) {
                         setContainerWidth(albumRef.current.clientWidth);
                     }
-                }, []); 
-
-                useEffect(() => {
+                },);
+useEffect(() => {
                     updateWidth();
                     
                     const resizeObserver = new ResizeObserver(updateWidth);
                     if (albumRef.current) {
-                        resizeObserver.observe(albumRef.current);
+            
+            resizeObserver.observe(albumRef.current);
                     }
                     
                     return () => {
                         resizeObserver.disconnect(); 
-                    };
-                }, [updateWidth]); 
 
-                const allContent = selectedAlbum.images;
+                    };
+                },);
+const allContent = selectedAlbum.images;
 
                 const justifiedRows = useMemo(() => {
-                    if (containerWidth <= 0) return [];
+                    if (containerWidth <= 0) return;
                     
-                    const rows = [];
-                    let currentRow = [];
+                    const rows =;
+                    let currentRow = 
+;
                     let currentRowTotalAspect = 0; 
                     
                     const calculateGapWidth = (count) => (count - 1) * GALLERY_GAP_PX;
 
-                    const finalizePhotoRow = (row, isLastRow = false) => {
+                    const finalizePhotoRow = (row, isLastRow = false) 
+=> {
                         if (row.length === 0) return;
 
                         const rowGapWidth = calculateGapWidth(row.length);
                         const rowContainerWidth = containerWidth - rowGapWidth;
-                        const totalAspect = row.reduce((sum, img) => sum + img.aspectRatio, 0);
+               
+         const totalAspect = row.reduce((sum, img) => sum + img.aspectRatio, 0);
 
                         let finalRowHeight = rowContainerWidth / totalAspect;
                         
                         if (!isLastRow) {
-                            const maxHeight = TARGET_ROW_HEIGHT * MAX_ROW_HEIGHT_MULTIPLIER;
+   
+                         const maxHeight = TARGET_ROW_HEIGHT * MAX_ROW_HEIGHT_MULTIPLIER;
                             if (finalRowHeight > maxHeight) {
-                                finalRowHeight = maxHeight; 
-                            }
+                                finalRowHeight = maxHeight;
+}
                         } else {
                             if (finalRowHeight > TARGET_ROW_HEIGHT * 1.2) {
                                 finalRowHeight = TARGET_ROW_HEIGHT;
-                            }
+}
                         }
                         
                         const finalRow = row.map(img => ({
-                            ...img,
+                       
+    ...img,
                             height: finalRowHeight,
                             width: img.aspectRatio * finalRowHeight,
                         }));
-                        
-                        rows.push({ type: 'photoRow', content: finalRow, uniqueId: rows.length });
+rows.push({ type: 'photoRow', content: finalRow, uniqueId: rows.length });
                     };
 
                     for (const item of allContent) {
                         if (item.type === 'divider') {
                             if (currentRow.length > 0) {
-                                finalizePhotoRow(currentRow);
-                                currentRow = [];
+                          
+      finalizePhotoRow(currentRow);
+                                currentRow =;
                                 currentRowTotalAspect = 0;
-                            }
+}
                             rows.push({ type: 'dividerRow', content: item, uniqueId: item.timestamp });
-
-                        } else if (item.aspectRatio > 0 && item.url) {
+} else if (item.aspectRatio > 0 && item.url) {
                             const potentialAspect = currentRowTotalAspect + item.aspectRatio;
-                            const rowCount = currentRow.length + 1;
+const rowCount = currentRow.length + 1;
                             const potentialRowHeight = (containerWidth - calculateGapWidth(rowCount)) / potentialAspect;
-
-                            // Условие для начала новой строки: если высота становится слишком маленькой (т.е. слишком много элементов в строке)
-                            const shouldStartNewRow = currentRow.length > 0 && potentialRowHeight < TARGET_ROW_HEIGHT * 0.9; 
-
-                            if (shouldStartNewRow) {
+// Условие для начала новой строки: если высота становится слишком маленькой (т.е. слишком много элементов в строке)
+                            const shouldStartNewRow = currentRow.length > 0 && potentialRowHeight < TARGET_ROW_HEIGHT * 0.9;
+if (shouldStartNewRow) {
                                 finalizePhotoRow(currentRow);
-
-                                currentRow = [item];
+currentRow = [item];
                                 currentRowTotalAspect = item.aspectRatio;
                             } else {
                                 currentRow.push(item);
-                                currentRowTotalAspect = potentialAspect;
+currentRowTotalAspect = potentialAspect;
                             }
                         }
                     }
                     
                     if (currentRow.length > 0) {
-                        finalizePhotoRow(currentRow, true);
-                    }
+         
+               finalizePhotoRow(currentRow, true);
+}
                     
                     return rows;
-
-                }, [allContent, containerWidth]);
+},);
 
 
                 const isDraggingCurrent = (uniqueId) => isReorderMode && dragItemUniqueId.current === uniqueId;
-                const isDragOverTarget = (uniqueId) => isReorderMode && dragOverItemUniqueId.current === uniqueId && dragItemUniqueId.current !== uniqueId;
-
-
-                return (
+const isDragOverTarget = (uniqueId) => isReorderMode && dragOverItemUniqueId.current === uniqueId && dragItemUniqueId.current!== uniqueId;
+return (
                     <div className="py-6 md:py-10 pt-4 md:pt-6"> 
                         <div 
                             ref={albumRef}
-                            className="w-full" 
-                            onDrop={isReorderMode && isAdmin ? handleDrop : undefined} // Только если режим активен
-                            onDragOver={isReorderMode && isAdmin ? handleDragOver : undefined} // Только если режим активен
-                        >
+                     
+       className="w-full" 
+                            onDrop={isReorderMode && isAdmin? handleDrop : undefined} // Только если режим активен
+                            onDragOver={isReorderMode && isAdmin? handleDragOver : undefined} // Только если режим активен
+              
+          >
                             {containerWidth === 0 && allContent.length > 0 && <CalculationSpinner />}
                             
-                            {/* Рендеринг Justified Gallery / Разделителей */}
+                         
+   {/* Рендеринг Justified Gallery / Разделителей */}
                             {(containerWidth > 0 && justifiedRows.length > 0) && justifiedRows.map((rowWrapper) => {
                                 const key = rowWrapper.uniqueId; 
 
-                                if (rowWrapper.type === 'dividerRow') {
+                 
+               if (rowWrapper.type === 'dividerRow') {
                                     const divider = rowWrapper.content;
-                                    return (
+return (
                                         <div 
                                             key={key} 
-                                            className={`
+             
+                               className={`
                                                 w-full my-8 flex items-center justify-center relative 
-                                                ${isReorderMode ? 'cursor-grab py-2' : ''}
-                                                ${isDraggingCurrent(divider.timestamp) ? 'opacity-50 border-2 border-indigo-500 scale-[0.98]' : ''}
-                                                ${isDragOverTarget(divider.timestamp) ? 'border-2 border-dashed border-green-500' : ''}
+               
+                                 ${isReorderMode? 'cursor-grab py-2' : ''}
+                                                ${isDraggingCurrent(divider.timestamp)? 'opacity-50 border-2 border-indigo-500 scale-[0.98]' : ''}
+       
+                                         ${isDragOverTarget(divider.timestamp)? 'border-2 border-dashed border-green-500' : ''}
                                             `}
-                                            draggable={isReorderMode && isAdmin} // ! Перетаскивание только для Admin
-                                            onDragStart={isReorderMode && isAdmin ? (e) => handleDragStart(e, divider.timestamp) : undefined}
-                                            onDragEnter={isReorderMode && isAdmin ? (e) => handleDragEnter(e, divider.timestamp) : undefined}
+         
+                                   draggable={isReorderMode && isAdmin} //! Перетаскивание только для Admin
+                                            onDragStart={isReorderMode && isAdmin? (e) => handleDragStart(e, divider.timestamp) : undefined}
+    
+                                        onDragEnter={isReorderMode && isAdmin?
+(e) => handleDragEnter(e, divider.timestamp) : undefined}
                                         >
                                             <div className="w-full h-px bg-gray-300 mx-4 hidden sm:block"></div>
-                                            <h2 className="text-2xl font-extrabold text-gray-800 px-4 py-2 border-b-2 border-indigo-600 inline-block text-center whitespace-nowrap">
+     
+                                       <h2 className="text-2xl font-extrabold text-gray-800 px-4 py-2 border-b-2 border-indigo-600 inline-block text-center whitespace-nowrap">
                                                 {divider.text}
-                                            </h2>
+   
+                                         </h2>
                                             <div className="w-full h-px bg-gray-300 mx-4 hidden sm:block"></div>
-                                            
+         
+                                   
                                             {/* ИНДИКАТОР ПЕРЕТАСКИВАНИЯ (Только для Admin) */}
-                                            {isReorderMode && isAdmin && (
+               
+                             {isReorderMode && isAdmin && (
                                                 <div 
-                                                    className="absolute top-1/2 left-2 transform -translate-y-1/2 bg-black/50 text-white p-1 rounded-full opacity-100 transition duration-200 cursor-grab z-20"
-                                                    title="Перетащить разделитель"
+                  
+                                  className="absolute top-1/2 left-2 transform -translate-y-1/2 bg-black/50 text-white p-1 rounded-full opacity-100 transition duration-200 cursor-grab z-20"
+                                                    title="Перетащить 
+разделитель"
                                                 >
-                                                    <GripVertical className="h-4 w-4" />
+                                                    
+<GripVertical className="h-4 w-4" />
                                                 </div>
                                             )}
-                                             {/* КНОПКА УДАЛЕНИЯ РАЗДЕЛИТЕЛЯ (Только для Admin) */}
+     
+                                        {/* КНОПКА УДАЛЕНИЯ РАЗДЕЛИТЕЛЯ (Только для Admin) */}
                                              {isDeleteMode && isAdmin && (
-                                                <button
+    
+                                            <button
                                                     onClick={(e) => { 
-                                                        e.stopPropagation(); 
-                                                        deletePhoto(selectedAlbum.id, divider);
+ 
+                                                       e.stopPropagation();
+deletePhoto(selectedAlbum.id, divider);
                                                     }}
                                                     className="absolute top-1/2 right-2 transform -translate-y-1/2 bg-red-600 text-white p-1.5 rounded-full opacity-100 transition duration-200 hover:bg-red-700 shadow-lg z-20"
-                                                    title="Удалить разделитель"
+                                
+                    title="Удалить разделитель"
                                                 >
-                                                    <Trash2 className="h-4 w-4" />
+                               
+                     <Trash2 className="h-4 w-4" />
                                                 </button>
-                                            )}
+                            
+                )}
                                         </div>
                                     );
-                                }
+}
 
                                 // --- РЕНДЕР: РЯД ФОТОГРАФИЙ ---
                                 const row = rowWrapper.content;
-                                return (
+return (
                                     <div
                                         key={key}
-                                        className="flex overflow-hidden"
+                       
+                 className="flex overflow-hidden"
                                         style={{ marginBottom: `${GALLERY_GAP_PX}px` }} 
                                     >
-                                        {row.map((image, imageIndex) => {
+  
+                                      {row.map((image, imageIndex) => {
                                             const uniqueId = image.timestamp; 
 
-                                            return (
+           
+                                 return (
                                                 <div 
-                                                    key={uniqueId} 
-                                                    onClick={!isDeleteMode && !isReorderMode ? () => setEnlargedImage(image) : undefined}
+                 
+                                   key={uniqueId} 
+                                                    onClick={!isDeleteMode &&!isReorderMode? () => setEnlargedImage(image) : undefined}
+    
+                                                
                                                     
-                                                    // Атрибуты Drag and Drop (Только для Admin)
+// Атрибуты Drag and Drop (Только для Admin)
                                                     draggable={isReorderMode && isAdmin}
-                                                    onDragStart={isReorderMode && isAdmin ? (e) => handleDragStart(e, uniqueId) : undefined}
-                                                    onDragEnter={isReorderMode && isAdmin ? (e) => handleDragEnter(e, uniqueId) : undefined}
+                                       
+             onDragStart={isReorderMode && isAdmin?
+(e) => handleDragStart(e, uniqueId) : undefined}
+                                                    onDragEnter={isReorderMode && isAdmin?
+(e) => handleDragEnter(e, uniqueId) : undefined}
 
                                                     className={`
-                                                        cursor-pointer relative overflow-hidden bg-gray-200 transition duration-150 shadow-md 
-                                                        ${isReorderMode && isAdmin ? 'cursor-grab active:cursor-grabbing' : 'hover:opacity-90'}
-                                                        ${isDraggingCurrent(uniqueId) ? 'opacity-50 border-4 border-indigo-500 scale-95' : ''}
-                                                        ${isDragOverTarget(uniqueId) ? 'border-4 border-dashed border-green-500' : ''}
+                                           
+             cursor-pointer relative overflow-hidden bg-gray-200 transition duration-150 shadow-md 
+                                                        ${isReorderMode && isAdmin?
+'cursor-grab active:cursor-grabbing' : 'hover:opacity-90'}
+                                                        ${isDraggingCurrent(uniqueId)?
+'opacity-50 border-4 border-indigo-500 scale-95' : ''}
+                                                        ${isDragOverTarget(uniqueId)?
+'border-4 border-dashed border-green-500' : ''}
                                                     `}
-                                                    style={{
+                                            
+        style={{
                                                         height: `${image.height}px`,
-                                                        width: `${image.width}px`,
-                                                        marginRight: imageIndex < row.length - 1 ? `${GALLERY_GAP_PX}px` : '0',
+                                   
+                     width: `${image.width}px`,
+                                                        marginRight: imageIndex < row.length - 1?
+`${GALLERY_GAP_PX}px` : '0',
                                                     }}
-                                                >
+                                              
+  >
                                                     <img 
-                                                        src={image.url} 
-                                                        alt={image.caption || `Фото ${key}-${imageIndex + 1}`} 
+                                             
+           src={image.url} 
+                                                        alt={image.caption ||
+`Фото ${key}-${imageIndex + 1}`} 
                                                         className="w-full h-full object-cover" 
-                                                        style={{ width: '100%', height: '100%' }}
+                                     
+                   style={{ width: '100%', height: '100%' }}
                                                         onError={(e) => { 
-                                                            e.target.onerror = null; 
-                                                            e.target.src = "https://placehold.co/400x400/CCCCCC/333333?text=URL+недоступен"; 
+                 
+                                           e.target.onerror = null;
+e.target.src = "https://placehold.co/400x400/CCCCCC/333333?text=URL+недоступен"; 
                                                         }}
                                                     />
-                                                    
+                                             
+       
                                                     {/* КНОПКА УДАЛЕНИЯ (Только для Admin) */}
-                                                    {isDeleteMode && isAdmin && (
+                                   
+                 {isDeleteMode && isAdmin && (
                                                         <button
-                                                            onClick={(e) => { 
-                                                                e.stopPropagation();
+                       
+                                     onClick={(e) => { 
+                                                            
+    e.stopPropagation();
                                                                 deletePhoto(selectedAlbum.id, image);
-                                                            }}
-                                                            className="absolute top-2 right-2 bg-red-600 text-white p-1.5 rounded-full opacity-100 transition duration-200 hover:bg-red-700 shadow-lg z-20"
+                               
+                             }}
+                                                            className="absolute top-2 right-2 bg-red-600 text-white p-1.5 rounded-full opacity-100 transition duration-200 hover:bg-red-700 
+shadow-lg z-20"
                                                             title="Удалить фото"
-                                                        >
+                                      
+                  >
                                                             <Trash2 className="h-4 w-4" />
-                                                        </button>
+                   
+                                     </button>
                                                     )}
 
-                                                    {/* ИНДИКАТОР ПЕРЕТАСКИВАНИЯ (Только для Admin) */}
-                                                    {isReorderMode && isAdmin && (
+           
+                                         {/* ИНДИКАТОР ПЕРЕТАСКИВАНИЯ (Только для Admin) */}
+                                                    {isReorderMode 
+&& isAdmin && (
                                                         <div 
-                                                            className="absolute top-1/2 left-2 transform -translate-y-1/2 bg-black/50 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition duration-200 cursor-grab z-20"
+                                        
+                    className="absolute top-1/2 left-2 transform -translate-y-1/2 bg-black/50 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition duration-200 cursor-grab z-20"
                                                             title="Перетащить"
-                                                        >
-                                                            <GripVertical className="h-4 w-4" />
+      
+                                                  >
+                                                  
+          <GripVertical className="h-4 w-4" />
                                                         </div>
-                                                    )}
+                               
+                     )}
                                                 </div>
-                                            );
-                                        })}
+                               
+             );
+})}
                                     </div>
                                 );
-                            })}
+})}
 
                         </div>
 
 
                         {allContent.length === 0 && (
                              <div className="mx-4 sm:mx-6 lg:mx-8 text-center py-20 bg-gray-50 rounded-xl mt-8 border border-dashed border-gray-300"> 
-                                <ImageIcon className="w-12 h-12 text-gray-400 mx-auto" />
+       
+                         <ImageIcon className="w-12 h-12 text-gray-400 mx-auto" />
                                 <h3 className="mt-2 text-lg font-medium text-gray-900">Этот альбом пуст</h3>
-                                {isAdmin && (
+                                
+{isAdmin && (
                                     <p className="mt-1 text-sm text-gray-500">
                                         Добавьте первое фото или разделитель, используя кнопки вверху.
-                                    </p>
+            
+                        </p>
                                 )}
                                 {!isAdmin && (
-                                    <p className="mt-1 text-sm text-gray-500">
+          
+                          <p className="mt-1 text-sm text-gray-500">
                                         Администратор скоро добавит контент.
-                                    </p>
+                            
+        </p>
                                 )}
                             </div>
                         )}
-                    </div>
+        
+            </div>
                 );
-            };
+};
 
             // --- Вид: Главная страница (Список альбомов) ---
             const HomeView = () => (
                 <div className="px-4 sm:px-6 lg:px-8 py-8">
                     <h2 className="text-3xl font-extrabold text-gray-900 mb-8 border-b pb-2">Все альбомы</h2>
                     
-                    {albums.length === 0 ? (
+        
+            {albums.length === 0? (
                         <div className="text-center py-20 bg-white rounded-xl border border-dashed border-gray-300">
                             <ImageIcon className="w-12 h-12 text-gray-400 mx-auto" />
-                            <h3 className="mt-2 text-lg font-medium text-gray-900">Альбомы не найдены</h3>
+                    
+        <h3 className="mt-2 text-lg font-medium text-gray-900">Альбомы не найдены</h3>
                             {isAdmin && (
                                 <p className="mt-1 text-sm text-gray-500">
-                                    Вы можете создать первый альбом.
+                     
+               Вы можете создать первый альбом.
                                 </p>
                             )}
-                        </div>
+                     
+   </div>
                     ) : (
                         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
                             {albums.map(album => (
-                                <AlbumCard key={album.id} album={album} />
+               
+                 <AlbumCard key={album.id} album={album} />
                             ))}
                         </div>
                     )}
-                </div>
+        
+        </div>
             );
-            // --- Общий рендеринг ---
+// --- Общий рендеринг ---
 
             // Увеличение, чтобы отобразить критические ошибки
             if (error && error.isCritical) {
                 return (
                     <div className="flex items-center justify-center min-h-screen bg-gray-100 p-4">
-                        <div className="bg-red-100 border-l-4 border-red-500 p-6 rounded-xl text-red-900 shadow-2xl max-w-lg">
+                        <div className="bg-red-100 
+border-l-4 border-red-500 p-6 rounded-xl text-red-900 shadow-2xl max-w-lg">
                             <h1 className="text-2xl font-bold mb-3">{error.name}</h1>
                             <p className="text-red-800 whitespace-pre-wrap">{error.message}</p>
                             <p className="mt-4 text-sm font-semibold">Пожалуйста, убедитесь, что переменные Firebase правильно настроены.</p>
                         </div>
-                    </div>
+  
+                  </div>
                 );
-            }
+}
             
-            if (!authReady || (loading && !error)) {
-                return <LoadingSpinner />;
-            }
+            if (!authReady |
 
-            if (error && !error.isCritical) {
+| (loading &&!error)) {
+                return <LoadingSpinner />;
+}
+
+            if (error &&!error.isCritical) {
                 // Рендеринг для некритической ошибки (например, не удалось загрузить альбом или ошибка аутентификации)
                 return (
                     <div className="p-8 text-center text-red-600 bg-red-100 rounded-xl m-10">
-                        <strong>{error.name || 'Ошибка'}:</strong> {error.message || 'Произошла неизвестная ошибка.'}
+             
+           <strong>{error.name |
+
+| 'Ошибка'}:</strong> {error.message |
+| 'Произошла неизвестная ошибка.'}
                     </div>
                 );
-            }
+}
 
             return (
                 <div className="min-h-screen bg-gray-50 font-sans">
                     
                     {/* Header / Top Bar */}
-                    <header className="bg-white shadow-md sticky top-0 z-10">
+                    <header className="bg-white shadow-md 
+sticky top-0 z-10">
                         <div className="px-4 sm:px-6 lg:px-8 py-3 flex justify-between items-center">
                             
                             {/* ЛЕВАЯ ЧАСТЬ: Логотип + Навигация по альбому */}
-                            <div className="flex items-center">
+   
+                         <div className="flex items-center">
                                 <div className="flex items-center">
-                                    <h1 className="text-3xl font-bold flex items-center">
+                                    <h1 className="text-3xl font-bold 
+flex items-center">
   <img src="/favicon.ico" alt="Логотип" className="inline-block w-6 h-6 mr-2 align-middle" />
   <span className="text-xl font-bold text-gray-800">Leon H-Arts</span>
 </h1>
                                 </div>
 
                                 {currentView === 'album' && selectedAlbum && (
-                                    <div className="ml-4 pl-4 border-l border-gray-200 flex items-center flex-wrap">
+             
+                       <div className="ml-4 pl-4 border-l border-gray-200 flex items-center flex-wrap">
                                         <button 
-                                            onClick={handleGoHome} 
+                             
+               onClick={handleGoHome} 
                                             className="text-indigo-600 hover:text-indigo-800 transition text-sm font-medium"
-                                            aria-label="Вернуться к альбомам"
+                                    
+        aria-label="Вернуться к альбомам"
                                         >
                                             Альбомы
-                                        </button>
+      
+                                  </button>
                                         <span className="text-gray-500 mx-2 text-sm">/</span>
-                                        <span className="text-gray-900 font-semibold text-sm truncate max-w-[150px] sm:max-w-xs" title={selectedAlbum.name}>{selectedAlbum.name}</span>
-                                        <span className="text-gray-500 ml-3 text-xs hidden sm:inline-block">({selectedAlbum.images.filter(i => i.type !== 'divider').length} фото)</span>
-                                    </div>
+                       
+                 <span className="text-gray-900 font-semibold text-sm truncate max-w-[150px] sm:max-w-xs" title={selectedAlbum.name}>{selectedAlbum.name}</span>
+                                        <span className="text-gray-500 ml-3 text-xs hidden sm:inline-block">({selectedAlbum.images.filter(i => i.type!== 'divider').length} фото)</span>
+                          
+          </div>
                                 )}
                             </div>
                             
-                            {/* ПРАВАЯ ЧАСТЬ: Кнопки действий */}
+  
+                          {/* ПРАВАЯ ЧАСТЬ: Кнопки действий */}
                             <div className="flex items-center space-x-3">
 
-                                {/* --- КНОПКИ РЕЖИМОВ РЕДАКТИРОВАНИЯ (Только в режиме альбома И для Admin) --- */}
+                                {/* --- КНОПКИ РЕЖИМОВ РЕДАКТИРОВАНИЯ (Только 
+в режиме альбома И для Admin) --- */}
                                 {isAdmin && currentView === 'album' && selectedAlbum && (
                                     <>
-                                        <button
+                 
+                       <button
                                             onClick={toggleDeleteMode}
-                                            className={`p-2 rounded-full transition shadow-md ${isDeleteMode 
-                                                ? 'bg-red-500 text-white hover:bg-red-600' 
+                                 
+           className={`p-2 rounded-full transition shadow-md ${isDeleteMode 
+                                               ?
+'bg-red-500 text-white hover:bg-red-600' 
                                                 : 'bg-white text-gray-700 hover:bg-gray-100'}`}
-                                            title="Включить/Выключить режим удаления"
+                                            title="Включить/Выключить режим 
+удаления"
                                             aria-pressed={isDeleteMode}
                                         >
-                                            <Trash2 className="h-5 w-5" />
+                
+                            <Trash2 className="h-5 w-5" />
                                         </button>
 
-                                        <button
+                             
+           <button
                                             onClick={toggleReorderMode}
-                                            className={`p-2 rounded-full transition shadow-md ${isReorderMode 
-                                                ? 'bg-indigo-500 text-white hover:bg-indigo-600' 
+                                            className={`p-2 
+rounded-full transition shadow-md ${isReorderMode 
+                                               ?
+'bg-indigo-500 text-white hover:bg-indigo-600' 
                                                 : 'bg-white text-gray-700 hover:bg-gray-100'}`}
-                                            title="Включить/Выключить режим изменения порядка"
+                                            title="Включить/Выключить режим 
+изменения порядка"
                                             aria-pressed={isReorderMode}
                                         >
-                                            <ArrowUpDown className="h-5 w-5" />
+               
+                             <ArrowUpDown className="h-5 w-5" />
                                         </button>
-                                        
+                            
+            
                                         <button
                                             onClick={() => setIsAddDividerModalOpen(true)}
-                                            className="p-2 border border-gray-300 text-sm font-medium rounded-full text-gray-700 bg-white hover:bg-gray-100 transition shadow-sm"
+  
+                                          className="p-2 border border-gray-300 text-sm font-medium rounded-full text-gray-700 bg-white hover:bg-gray-100 transition shadow-sm"
                                             title="Добавить разделитель (Глава)"
-                                            disabled={isDeleteMode || isReorderMode}
+  
+                                          disabled={isDeleteMode ||
+isReorderMode}
                                         >
                                             <Pencil className="h-5 w-5" />
-                                        </button>
+             
+                           </button>
                                     </>
                                 )}
 
 
-                                {/* --- КНОПКИ ДОБАВЛЕНИЯ (Только для Admin) --- */}
+     
+                           {/* --- КНОПКИ ДОБАВЛЕНИЯ (Только для Admin) --- */}
                                 {isAdmin && (
-                                    <>
+                               
+     <>
                                         <button
                                             onClick={() => setIsAddPhotoModalOpen(true)}
-                                            className="flex items-center p-2 border border-gray-300 text-sm font-medium rounded-full shadow-sm text-gray-700 bg-white hover:bg-gray-100 transition"
-                                            disabled={isDeleteMode || isReorderMode}
-                                            title="Добавить фото"
+         
+                                   className="flex items-center p-2 border border-gray-300 text-sm font-medium rounded-full shadow-sm text-gray-700 bg-white hover:bg-gray-100 transition"
+                                            disabled={isDeleteMode |
+
+| isReorderMode}
+       
+                                     title="Добавить фото"
                                         >
-                                            <ImageIcon className="h-5 w-5" />
+                      
+                      <ImageIcon className="h-5 w-5" />
                                         </button>
-                                        <button
+                                   
+     <button
                                             onClick={() => setIsAddAlbumModalOpen(true)}
-                                            className="flex items-center p-2 border border-gray-300 text-sm font-medium rounded-full text-gray-700 bg-white hover:bg-gray-100 transition shadow-sm"
+                                            className="flex items-center p-2 border border-gray-300 
+text-sm font-medium rounded-full text-gray-700 bg-white hover:bg-gray-100 transition shadow-sm"
                                             title="Создать альбом"
                                         >
-                                            <Plus className="h-5 w-5" />
+        
+                                    <Plus className="h-5 w-5" />
                                         </button>
-                                    </>
+                     
+               </>
                                 )}
                                 
-                                {/* --- КНОПКА АДМИНА (Login/Logout) --- */}
+                     
+           {/* --- КНОПКА АДМИНА (Login/Logout) --- */}
                                 {!isAdmin && (
                                     <button
-                                        onClick={() => setIsLoginModalOpen(true)}
+             
+                           onClick={() => setIsLoginModalOpen(true)}
                                         className="flex items-center px-4 py-2 border border-indigo-300 text-sm font-medium rounded-full text-indigo-700 bg-indigo-100 hover:bg-indigo-200 transition shadow-sm"
-                                        title="Войти как Администратор"
+                  
+                      title="Войти как Администратор"
                                     >
-                                        <Key className="h-5 w-5 mr-2" />
+                                        
+<Key className="h-5 w-5 mr-2" />
                                         Админ Вход
                                     </button>
-                                )}
+                   
+             )}
                             </div>
                         </div>
                     </header>
 
-                    {/* Main Content */}
+               
+     {/* Main Content */}
                     <main className="pb-12">
-                        {currentView === 'home' ? <HomeView /> : <AlbumPhotoView />}
+                        {currentView === 'home'?
+<HomeView /> : <AlbumPhotoView />}
                     </main>
 
                     {/* Modals */}
                     <AdminLoginModal /> 
                     <RenameAlbumModal />
-                    <AddAlbumModal />
+           
+         <AddAlbumModal />
                     <AddPhotoModal />
                     <AddDividerModal /> 
                     
-                    {/* Модал: Увеличенное изображение с редактированием подписи */}
+                    {/* Модал: Увеличенное изображение с редактированием подписи 
+*/}
                     <ImageModal 
                         image={enlargedImage} 
                         onClose={() => setEnlargedImage(null)} 
                         onSaveCaption={updatePhotoCaption}
-                        albumId={selectedAlbum?.id} 
+   
+                     albumId={selectedAlbum?.id} 
                         onNext={handleNextImage}
                         onPrev={handlePrevImage}
                         isAdmin={isAdmin} 
-                    />
+     
+               />
 
                 </div>
             );
-        };
+};
         
         // Рендеринг приложения
         const container = document.getElementById('root');
-        // Используем createRoot для React 18+
+// Используем createRoot для React 18+
         const root = ReactDOM.createRoot(container);
         root.render(<App />);
 
