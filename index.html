@@ -411,7 +411,6 @@
 
         // Главный компонент приложения
         const App = () => {
-            
             // === ИСПРАВЛЕННАЯ СИСТЕМА СОХРАНЕНИЯ ПОЗИЦИИ ПРОКРУТКИ ===
             const scrollPosition = useRef(0);
             
@@ -422,7 +421,6 @@
             };
 
             // ИСПРАВЛЕНО: Удалены shouldRestoreScroll и restoreScrollPosition
-            // Вместо них будет использован useLayoutEffect ниже.
             // =========================================================
 
             // Используем '|| false' для authReady, чтобы убедиться, что состояние определено
@@ -459,17 +457,7 @@
             const dragItemUniqueId = useRef(null); 
             const dragOverItemUniqueId = useRef(null); 
 
-            
             // === ИСПРАВЛЕНИЕ ЛОГИКИ ПРОКРУТКИ ===
-            // Мы используем ref, чтобы отслеживать *предыдущее* состояние enlargedImage
-            // const enlargedImageRef = useRef(enlargedImage); // УДАЛЕНО
-
-            /*
-            useLayoutEffect(() => {
-                // ... (ВЕСЬ БЛОК useLayoutEffect УДАЛЕН)
-            }, [enlargedImage]);
-            */
-
             // НОВАЯ ФУНКЦИЯ: Вызывается при клике на фото в галерее
             const handleOpenImage = useCallback((image) => {
                 saveScrollPosition(); // 1. Сохраняем текущую прокрутку
@@ -492,6 +480,7 @@
                 }, 1); 
             }, []); // Зависимостей нет, ref-ы и setState - стабильны
             // ===================================
+
 
             // --- 1. Аутентификация и Настройка ---
             useEffect(() => {
@@ -556,14 +545,14 @@
             // Функция для открытия модала переименования
             const handleOpenRenameModal = useCallback((album) => {
                 if (!isAdmin) return;
-                saveScrollPosition(); // Используем нашу функцию сохранения
+                // ИСПРАВЛЕНО: saveScrollPosition() убран
                 setAlbumToRename(album);
                 setIsRenameModalOpen(true);
             }, [isAdmin]);
 
             // Функция для закрытия модала переименования
             const handleCloseRenameModal = useCallback(() => {
-                // saveScrollPosition(); // Здесь сохранять не нужно, т.к. модал просто закрывается
+                // ИСПРАВЛЕНО: saveScrollPosition() убран
                 setIsRenameModalOpen(false);
                 setAlbumToRename(null);
             }, []);
@@ -627,7 +616,7 @@
             // Управление режимами редактирования
             const toggleDeleteMode = useCallback(() => {
                 if (!isAdmin) return; // ! Проверка Admin
-                // saveScrollPosition(); // Не нужно, т.к. не открываем модал
+                // ИСПРАВЛЕНО: saveScrollPosition() убран
                 setIsDeleteMode(prev => !prev);
                 if (!isDeleteMode) { 
                     setIsReorderMode(false); // Отключаем переупорядочивание
@@ -636,7 +625,7 @@
 
             const toggleReorderMode = useCallback(() => {
                 if (!isAdmin) return; // ! Проверка Admin
-                // saveScrollPosition(); // Не нужно
+                // ИСПРАВЛЕНО: saveScrollPosition() убран
                 setIsReorderMode(prev => !prev);
                 if (!isReorderMode) { 
                     setIsDeleteMode(false); // Отключаем удаление
@@ -645,7 +634,7 @@
             // -----------------------------------------
 
             const handleGoHome = useCallback(() => {
-                // saveScrollPosition(); // Не нужно, т.к. уходим со страницы
+                // ИСПРАВЛЕНО: saveScrollPosition() убран
                 setSelectedAlbum(null);
                 setCurrentView('home');
                 setIsDeleteMode(false); 
@@ -743,7 +732,7 @@
             
             // **ФУНКЦИЯ ПЕРЕИМЕНОВАНИЯ АЛЬБОМА**
             const renameAlbum = async (albumId, newName) => {
-                // saveScrollPosition(); // Не нужно
+                // ИСПРАВЛЕНО: saveScrollPosition() убран
                 if (!isAdmin) {
                     alertUser('Ошибка доступа', 'Вы должны быть Администратором для переименования альбомов.');
                     return false;
@@ -775,7 +764,7 @@
             
             // **ОБНОВЛЕНИЕ ПОДПИСИ ФОТОГРАФИИ**
             const updatePhotoCaption = async (albumId, photoTimestamp, newCaption) => {
-                // saveScrollPosition(); // Не нужно, модал уже открыт
+                // ИСПРАВЛЕНО: saveScrollPosition() убран
                 if (!isAdmin) { // ! Проверка Admin
                     alertUser('Ошибка доступа', 'Вы должны быть Администратором для редактирования подписей.');
                     return;
@@ -821,7 +810,7 @@
             
             // **УДАЛЕНИЕ ЭЛЕМЕНТА (ФОТО ИЛИ РАЗДЕЛИТЕЛЬ)**
             const deletePhoto = async (albumId, itemToDelete) => {
-                // saveScrollPosition(); // Не нужно
+                // ИСПРАВЛЕНО: saveScrollPosition() убран
                 if (!isAdmin) { // ! Проверка Admin
                     alertUser('Ошибка доступа', 'Вы должны быть Администратором для удаления элементов.');
                     return;
@@ -864,7 +853,7 @@
             // **ИЗМЕНЕНИЕ ПОРЯДКА ФОТОГРАФИЙ И РАЗДЕЛИТЕЛЕЙ (DRAG AND DROP)**
             const handleDragStart = useCallback((e, uniqueId) => {
                 if (!isReorderMode || !isAdmin) return; // ! Проверка Admin
-                // saveScrollPosition(); // Не нужно
+                // ИСПРАВЛЕНО: saveScrollPosition() убран
                 dragItemUniqueId.current = uniqueId;
                 e.dataTransfer.effectAllowed = "move";
                 // Установка Drag Image для лучшего UX
@@ -885,7 +874,7 @@
             }, [isReorderMode, isAdmin]);
 
             const handleDrop = useCallback(async (e) => {
-                // saveScrollPosition(); // Не нужно
+                // ИСПРАВЛЕНО: saveScrollPosition() убран
                 if (!isAdmin) {
                     alertUser('Ошибка доступа', 'Вы должны быть Администратором для изменения порядка.');
                     dragItemUniqueId.current = null;
@@ -948,7 +937,7 @@
 
             // **СОЗДАНИЕ РАЗДЕЛИТЕЛЯ**
             const addDivider = async (albumId, text) => {
-                // saveScrollPosition(); // Не нужно
+                // ИСПРАВЛЕНО: saveScrollPosition() убран
                 if (!isAdmin) { // ! Проверка Admin
                     alertUser('Ошибка доступа', 'Вы должны быть Администратором для добавления разделителей.');
                     return;
@@ -984,7 +973,7 @@
 
             // Создание нового альбома
             const createNewAlbum = async (name) => {
-                // saveScrollPosition(); // Не нужно
+                // ИСПРАВЛЕНО: saveScrollPosition() убран
                 if (!isAdmin) { // ! Проверка Admin
                     alertUser('Ошибка доступа', 'Вы должны быть Администратором для создания альбомов.');
                     return;
@@ -1013,7 +1002,7 @@
 
             // Добавление ссылки на фото в альбом
             const addPhotoLink = async (albumId, url, aspectRatio = 1.0) => {
-                // saveScrollPosition(); // Не нужно
+                // ИСПРАВЛЕНО: saveScrollPosition() убран
                 if (!isAdmin) { // ! Проверка Admin
                     alertUser('Ошибка доступа', 'Вы должны быть Администратором для добавления фото.');
                     return;
