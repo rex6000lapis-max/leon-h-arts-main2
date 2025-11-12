@@ -137,6 +137,15 @@
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
         @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
         .animate-fade-in-up { animation: fadeInUp 0.3s ease-out; }
+        
+        /* Добавлено для предотвращения скачков прокрутки */
+        html {
+            scroll-behavior: auto;
+        }
+        
+        body {
+            overflow-anchor: none;
+        }
     </style>
 </head>
 <body>
@@ -255,13 +264,13 @@
             
             // Устанавливаем флаг, что модальное окно открыто
             useEffect(() => {
-                // Сохраняем позицию перед открытием модального окна
+                // Сохраняем позицию только при открытии, не при каждом рендере
                 onSaveScrollPosition();
                 
                 return () => {
                     // При закрытии модального окна ничего не делаем - позиция уже сохранена
                 };
-            }, [onSaveScrollPosition]);
+            }, [onSaveScrollPosition]); // Только при монтировании/размонтировании
 
             useEffect(() => {
                 setCaption(image.caption || '');
@@ -423,32 +432,39 @@
             const scrollPosition = useRef(0);
             const shouldRestoreScroll = useRef(false);
             const isModalOpen = useRef(false);
+            const isSavingScroll = useRef(false); // Новый флаг для предотвращения конфликтов
 
             const saveScrollPosition = useCallback(() => {
-                // Не сохраняем позицию, если модальное окно открыто
-                if (isModalOpen.current) {
-                    console.log('Skip saving scroll position - modal is open');
+                // Не сохраняем позицию, если модальное окно открыто или идет процесс сохранения
+                if (isModalOpen.current || isSavingScroll.current) {
                     return;
                 }
                 
+                isSavingScroll.current = true;
                 const currentScroll = window.scrollY || document.documentElement.scrollTop;
                 if (currentScroll > 0) {
                     scrollPosition.current = currentScroll;
                     shouldRestoreScroll.current = true;
                     console.log('Scroll position saved:', scrollPosition.current);
                 }
+                // Сбрасываем флаг после небольшой задержки
+                setTimeout(() => {
+                    isSavingScroll.current = false;
+                }, 100);
             }, []);
 
             const restoreScrollPosition = useCallback(() => {
-                if (shouldRestoreScroll.current && scrollPosition.current > 0) {
+                if (shouldRestoreScroll.current && scrollPosition.current > 0 && !isModalOpen.current) {
                     console.log('Restoring scroll to:', scrollPosition.current);
                     
-                    requestAnimationFrame(() => {
+                    // Используем несколько попыток для надежности
+                    const attemptScroll = () => {
                         window.scrollTo({
                             top: scrollPosition.current,
                             behavior: 'auto'
                         });
                         
+                        // Проверяем успешность и при необходимости повторяем
                         setTimeout(() => {
                             const currentScroll = window.scrollY || document.documentElement.scrollTop;
                             if (Math.abs(currentScroll - scrollPosition.current) > 10) {
@@ -459,8 +475,10 @@
                                 });
                             }
                             shouldRestoreScroll.current = false;
-                        }, 100);
-                    });
+                        }, 50);
+                    };
+                    
+                    requestAnimationFrame(attemptScroll);
                 }
             }, []);
 
@@ -580,7 +598,7 @@
                 // Восстанавливаем позицию после закрытия модального окна
                 setTimeout(() => {
                     restoreScrollPosition();
-                }, 50);
+                }, 100);
             }, [restoreScrollPosition]);
 
             // --- ЛОГИКА АДМИНИСТРАТОРА (Login/Logout) ---
@@ -687,7 +705,7 @@
                 // Восстанавливаем позицию после закрытия модального окна
                 setTimeout(() => {
                     restoreScrollPosition();
-                }, 50);
+                }, 100);
             }, [restoreScrollPosition]);
 
             const alertUser = (title, message) => {
@@ -1075,7 +1093,7 @@
                     // Восстанавливаем позицию после успешного добавления
                     setTimeout(() => {
                         restoreScrollPosition();
-                    }, 100);
+                    }, 300); // Увеличиваем задержку для гарантии
 
                 } catch (e) {
                     console.error("Ошибка при добавлении ссылки:", e);
@@ -1156,8 +1174,12 @@
                         // Восстанавливаем позицию после закрытия модального окна
                         setTimeout(() => {
                             restoreScrollPosition();
-                        }, 50);
+                        }, 100);
                     }
+                    
+                    return () => {
+                        isModalOpen.current = false;
+                    };
                 }, [isOpen, saveScrollPosition, restoreScrollPosition]);
 
                 if (!isOpen) return null;
