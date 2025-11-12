@@ -49,8 +49,8 @@
     window.signInAnonymously = signInAnonymously;
     window.signInWithCustomToken = signInWithCustomToken;
     window.onAuthStateChanged = onAuthStateChanged;
-    window.signInWithEmailAndPassword = signInWithEmailAndPassword; // ✅ ВАЖНО — добавлено!
-    window.signOut = signOut; // ✅ Тоже нужно для выхода
+    window.signInWithEmailAndPassword = signInWithEmailAndPassword;
+    window.signOut = signOut;
     window.getFirestore = getFirestore;
     window.doc = doc;
     window.onSnapshot = onSnapshot;
@@ -209,7 +209,6 @@
              <Icon {...props}><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" /><line x1="12" x2="12" y1="9" y2="13" /><line x1="12" x2="12" y1="17" y2="17" /></Icon>
         );
 
-
         // --- КОНСТАНТЫ И НАСТРОЙКИ ---
         const ADMIN_UID = "fqU30jiK7rOobaur0XN2pVY4PMC2";  
         const PUBLIC_COLLECTION_NAME = "fanfic_gallery_albums"; 
@@ -244,9 +243,7 @@
         const GALLERY_GAP_PX = 2; 
         const MAX_ROW_HEIGHT_MULTIPLIER = 1.5; 
 
-
         // --- КОМПОНЕНТ: Модальное окно для увеличенного изображения ---
-        // ИСПРАВЛЕНО: убран onSaveScrollPosition из props
         const ImageModal = ({ image, onClose, onSaveCaption, albumId, onNext, onPrev, isAdmin }) => {
             if (!image || image.type === 'divider') return null;
 
@@ -261,7 +258,6 @@
             useEffect(() => {
                 const handleKeyDown = (e) => {
                     if (e.key === 'Escape') {
-                        // ИСПРАВЛЕНО: onSaveScrollPosition() убран
                         onClose();
                     } else if (e.key === 'ArrowRight') {
                         onNext();
@@ -273,8 +269,7 @@
                 return () => {
                     document.removeEventListener('keydown', handleKeyDown);
                 };
-            }, [onClose, onNext, onPrev]); // ИСПРАВЛЕНО: onSaveScrollPosition убран из зависимостей
-
+            }, [onClose, onNext, onPrev]);
 
             const handleSave = async () => {
                 if (!isAdmin) {
@@ -286,19 +281,14 @@
                 setIsSaving(false);
             };
 
-            const handleClose = () => {
-                // ИСПРАВЛЕНО: onSaveScrollPosition() убран
-                onClose();
-            };
-
             return (
                 <div 
                     className="fixed inset-0 z-[60] bg-black bg-opacity-90 flex justify-center items-center transition-opacity"
-                    onClick={handleClose}
+                    onClick={onClose}
                 >
                     {/* --- Контейнер для кнопок X и i (вверху справа) --- */}
                     <div className="absolute top-4 right-4 z-[70] flex space-x-2 p-2">
-                        {isAdmin && ( // ! Кнопка редактирования только для администратора
+                        {isAdmin && (
                             <button
                                 onClick={(e) => { e.stopPropagation(); setIsEditPanelOpen(prev => !prev); }}
                                 className={`p-2 text-white transition rounded-full shadow-lg ${
@@ -311,7 +301,7 @@
                             </button>
                         )}
                         <button 
-                            onClick={handleClose} 
+                            onClick={onClose} 
                             className="p-2 text-white hover:bg-opacity-70 transition rounded-full bg-black bg-opacity-50"
                             aria-label="Закрыть"
                         >
@@ -374,20 +364,19 @@
                         {/* Панель редактирования подписи (Только для Админа) */}
                         {isAdmin && (
                             <div 
-                                className={`
-                                    bg-white p-4 sm:p-6 rounded-xl shadow-2xl transition-all duration-300 ease-in-out mt-2
-                                    ${isEditPanelOpen ? 'block' : 'hidden'}
-                                `}
+                                className={`bg-white p-4 sm:p-6 rounded-xl shadow-2xl transition-all duration-300 ease-in-out mt-2 ${
+                                    isEditPanelOpen ? 'block' : 'hidden'
+                                }`}
                             >
                                 <h3 className="text-lg font-bold text-gray-800 mb-3">Редактировать подпись</h3>
-                                    <textarea
-                                        value={caption}
-                                        onChange={(e) => setCaption(e.target.value)}
-                                        placeholder="Введите подпись, например, 'Главный персонаж Аниме X'"
-                                        className="w-full flex-grow p-3 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500"
-                                        maxLength={200}
-                                        rows={3}
-                                    />
+                                <textarea
+                                    value={caption}
+                                    onChange={(e) => setCaption(e.target.value)}
+                                    placeholder="Введите подпись, например, 'Главный персонаж Аниме X'"
+                                    className="w-full flex-grow p-3 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500"
+                                    maxLength={200}
+                                    rows={3}
+                                />
                                 <button 
                                     onClick={handleSave}
                                     disabled={isSaving}
@@ -406,148 +395,91 @@
                 </div>
             );
         };
-        // --------------------------------------------------------------------
-
 
         // Главный компонент приложения
         const App = () => {
-            // === ОБЪЕДИНЕННАЯ СИСТЕМА СОХРАНЕНИЯ ПОЗИЦИИ ПРОКРУТКИ ===
+            // === СИСТЕМА СОХРАНЕНИЯ ПОЗИЦИИ ПРОКРУТКИ ===
             const scrollPosition = useRef(0);
-
-            // (ИСПРАВЛЕНИЕ)
-            // Эта функция вызывается ПЕРЕД ЛЮБЫМ ДЕЙСТВИЕМ, которое может
-            // вызвать обновление UI и сброс прокрутки (кроме открытия модала)
-            // const saveScrollPosition = () => {
-            //     scrollPosition.current = window.scrollY || document.documentElement.scrollTop;
-            //     console.log('Scroll position saved:', scrollPosition.current);
-            // };
-            // (КОНЕЦ ИСПРАВЛЕНИЯ)
-            
-            // (ИСПРАВЛЕНИЕ: Возвращаем логику из "Файла 1" с доработкой)
             const shouldRestoreScroll = useRef(false);
-            const isModalOpening = useRef(false); // Флаг для модального окна
 
             const saveScrollPosition = () => {
                 scrollPosition.current = window.scrollY || document.documentElement.scrollTop;
                 shouldRestoreScroll.current = true;
-                console.log('Scroll position saved:', scrollPosition.current);
             };
 
             const restoreScrollPosition = () => {
-                // Не восстанавливать, если мы в процессе открытия модала
-                if (isModalOpening.current) {
-                    isModalOpening.current = false; // Сбрасываем флаг
-                    shouldRestoreScroll.current = false; // Также сбрасываем, т.к. мы обработали этот "save"
-                    return; // Пропускаем восстановление
-                }
-                
-                if (shouldRestoreScroll.current) {
-                    // Восстанавливаем с небольшой задержкой, чтобы React успел
-                    // Это гарантирует, что прокрутка применится ПОСЛЕ обновления DOM
+                if (shouldRestoreScroll.current && scrollPosition.current > 0) {
                     setTimeout(() => {
-                         window.scrollTo({
+                        window.scrollTo({
                             top: scrollPosition.current,
                             behavior: 'auto'
                         });
-                    }, 1); // 1ms задержка
-                    shouldRestoreScroll.current = false;
+                        shouldRestoreScroll.current = false;
+                    }, 100);
                 }
             };
 
-            // Восстанавливаем позицию после ЛЮБЫХ изменений состояния
+            // Восстанавливаем позицию после любых изменений состояния
             useEffect(() => {
                 restoreScrollPosition();
             });
-            // (КОНЕЦ ИСПРАВЛЕНИЯ)
 
-
-            // ИСПРАВЛЕНО: Удалены shouldRestoreScroll, restoreScrollPosition и глобальный useEffect
-            // =========================================================
-
-            // Используем '|| false' для authReady, чтобы убедиться, что состояние определено
             const [authReady, setAuthReady] = useState(false);
             const [userId, setUserId] = useState(null);
             const [albums, setAlbums] = useState([]);
             const [loading, setLoading] = useState(true);
-            // Инициализируем state ошибкой, если она возникла при загрузке конфига
-            const [error, setError] = useState(configError || null); 
-
-            // --- НОВОЕ: Состояние администратора ---
+            const [error, setError] = useState(configError || null);
             const [isAdmin, setIsAdmin] = useState(false);
             const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
-            
-            // --- НОВОЕ: Состояние переименования ---
             const [isRenameModalOpen, setIsRenameModalOpen] = useState(false);
             const [albumToRename, setAlbumToRename] = useState(null);
-
-            const [currentView, setCurrentView] = useState('home'); 
+            const [currentView, setCurrentView] = useState('home');
             const [selectedAlbum, setSelectedAlbum] = useState(null);
-
-            // Состояния для режимов редактирования
             const [isDeleteMode, setIsDeleteMode] = useState(false);
             const [isReorderMode, setIsReorderMode] = useState(false);
-            
-            // Состояние модальных окон
             const [isAddAlbumModalOpen, setIsAddAlbumModalOpen] = useState(false);
             const [isAddPhotoModalOpen, setIsAddPhotoModalOpen] = useState(false);
             const [isAddDividerModalOpen, setIsAddDividerModalOpen] = useState(false);
-            
-            const [enlargedImage, setEnlargedImage] = useState(null); 
-            
-            // Состояния для Drag and Drop
-            const dragItemUniqueId = useRef(null); 
-            const dragOverItemUniqueId = useRef(null); 
+            const [enlargedImage, setEnlargedImage] = useState(null);
+            const dragItemUniqueId = useRef(null);
+            const dragOverItemUniqueId = useRef(null);
 
-            // === ОБЪЕДИНЕННАЯ ЛОГИКА ПРОКРУТКИ (ИЗ ФАЙЛА 2) ===
-            // НОВАЯ ФУНКЦИЯ: Вызывается при клике на фото в галерее
+            // === ИСПРАВЛЕННАЯ ЛОГИКА ОТКРЫТИЯ/ЗАКРЫТИЯ ИЗОБРАЖЕНИЯ ===
             const handleOpenImage = useCallback((image) => {
-                saveScrollPosition(); // 1. Сохраняем текущую прокрутку
-                isModalOpening.current = true; // 2. Ставим флаг, что модал открывается
-                setEnlargedImage(image); // 3. Открываем модал
-            }, []); // Зависимостей нет, т.к. saveScrollPosition и setEnlargedImage стабильны
+                saveScrollPosition();
+                setEnlargedImage(image);
+            }, []);
 
-            // НОВАЯ ФУНКЦИЯ: Вызывается при закрытии модала
             const handleCloseImage = useCallback(() => {
-                setEnlargedImage(null); // Просто закрываем модал
-
-                // (ИСПРАВЛЕНИЕ: Глобальный useEffect теперь сам справится с восстановлением)
-                // ИСПРАВЛЕНИЕ: Восстанавливаем прокрутку здесь,
-                // но с небольшой задержкой (1мс), чтобы React успел
-                // убрать модал и страница "появилась".
-                // setTimeout(() => {
-                //     window.scrollTo({
-                //         top: scrollPosition.current,
-                //         behavior: 'auto'
-                //     });
-                //     console.log('Restoring scroll (from handleCloseImage) to:', scrollPosition.current);
-                // }, 1); 
-            }, []); // Зависимостей нет, ref-ы и setState - стабильны
-            // ===================================
-
+                setEnlargedImage(null);
+                // Восстанавливаем прокрутку после закрытия модала
+                setTimeout(() => {
+                    window.scrollTo({
+                        top: scrollPosition.current,
+                        behavior: 'auto'
+                    });
+                }, 1);
+            }, []);
 
             // --- 1. Аутентификация и Настройка ---
             useEffect(() => {
-                // Если есть критическая ошибка конфигурации, дальше не идем
                 if (error && error.isCritical) {
-                    setAuthReady(true); 
+                    setAuthReady(true);
                     setLoading(false);
                     return;
                 }
 
-                // Устанавливаем статус администратора из localStorage (простая сессия)
                 const adminStatus = localStorage.getItem('isAdmin');
                 if (adminStatus === 'true') {
                     setIsAdmin(true);
                 }
 
                 const setupFirebase = async () => {
-                    if (!auth) { 
-                        // Если auth не инициализирован (из-за ошибки конфига), просто завершаем.
+                    if (!auth) {
                         setAuthReady(true);
                         return;
                     }
                     try {
-                        // Всегда пытаемся войти, чтобы получить userId для сессии
                         if (initialAuthToken) {
                             await signInWithCustomToken(auth, initialAuthToken);
                         } else {
@@ -555,10 +487,10 @@
                         }
                     } catch (e) {
                         console.error("Ошибка аутентификации:", e);
-                        setError(prev => ({ 
-                            ...prev, 
-                            name: "Ошибка аутентификации", 
-                            message: `Не удалось авторизоваться в Firebase. (Код: ${e.code || 'UNKNOWN'}, Сообщение: ${e.message})` 
+                        setError(prev => ({
+                            ...prev,
+                            name: "Ошибка аутентификации",
+                            message: `Не удалось авторизоваться в Firebase. (Код: ${e.code || 'UNKNOWN'}, Сообщение: ${e.message})`
                         }));
                     }
                 };
@@ -567,18 +499,17 @@
                     if (user) {
                         setUserId(user.uid);
                     } else {
-                        setUserId(null); 
+                        setUserId(null);
                     }
                     setAuthReady(true);
                 });
 
                 setupFirebase();
                 return () => unsubscribe();
-            }, [error]); 
+            }, [error]);
 
             // Функция для сброса режимов редактирования при смене статуса Admin
             useEffect(() => {
-                // Сброс режимов редактирования при выходе из Admin
                 if (!isAdmin) {
                     setIsDeleteMode(false);
                     setIsReorderMode(false);
@@ -588,14 +519,14 @@
             // Функция для открытия модала переименования
             const handleOpenRenameModal = useCallback((album) => {
                 if (!isAdmin) return;
-                saveScrollPosition(); // ИЗ ФАЙЛА 1: Сохраняем позицию
+                saveScrollPosition();
                 setAlbumToRename(album);
                 setIsRenameModalOpen(true);
             }, [isAdmin]);
 
             // Функция для закрытия модала переименования
             const handleCloseRenameModal = useCallback(() => {
-                saveScrollPosition(); // ИЗ ФАЙЛА 1: Сохраняем позицию
+                saveScrollPosition();
                 setIsRenameModalOpen(false);
                 setAlbumToRename(null);
             }, []);
@@ -620,16 +551,13 @@
                         await signOut(auth);
                         alertUser('Ошибка доступа', 'Этот аккаунт не имеет прав администратора.');
                     }
-
                 } catch (e) {
                     console.error("Ошибка входа администратора:", e);
                     alertUser('Ошибка входа', `Не удалось войти. Проверьте Email и Пароль. (${e.code})`);
                 }
             };
 
-            // --------------------------------------------
-
-            // Функции навигации в модальном окне (пропускает разделители)
+            // Функции навигации в модальном окне
             const handleNavigation = useCallback((direction) => {
                 if (!enlargedImage || !selectedAlbum) return;
 
@@ -644,7 +572,7 @@
                 let nextIndex;
                 if (direction === 'next') {
                     nextIndex = (currentIndex + 1) % images.length;
-                } else { // 'prev'
+                } else {
                     nextIndex = (currentIndex - 1 + images.length) % images.length;
                 }
                 
@@ -654,48 +582,44 @@
 
             const handleNextImage = useCallback(() => handleNavigation('next'), [handleNavigation]);
             const handlePrevImage = useCallback(() => handleNavigation('prev'), [handleNavigation]);
-            // --------------------------------------------------
 
             // Управление режимами редактирования
             const toggleDeleteMode = useCallback(() => {
-                if (!isAdmin) return; // ! Проверка Admin
-                saveScrollPosition(); // ИЗ ФАЙЛА 1: Сохраняем позицию
+                if (!isAdmin) return;
+                saveScrollPosition();
                 setIsDeleteMode(prev => !prev);
-                if (!isDeleteMode) { 
-                    setIsReorderMode(false); // Отключаем переупорядочивание
+                if (!isDeleteMode) {
+                    setIsReorderMode(false);
                 }
             }, [isDeleteMode, isAdmin]);
 
             const toggleReorderMode = useCallback(() => {
-                if (!isAdmin) return; // ! Проверка Admin
-                saveScrollPosition(); // ИЗ ФАЙЛА 1: Сохраняем позицию
+                if (!isAdmin) return;
+                saveScrollPosition();
                 setIsReorderMode(prev => !prev);
-                if (!isReorderMode) { 
-                    setIsDeleteMode(false); // Отключаем удаление
+                if (!isReorderMode) {
+                    setIsDeleteMode(false);
                 }
             }, [isReorderMode, isAdmin]);
-            // -----------------------------------------
 
             const handleGoHome = useCallback(() => {
-                saveScrollPosition(); // ИЗ ФАЙЛА 1: Сохраняем позицию
+                saveScrollPosition();
                 setSelectedAlbum(null);
                 setCurrentView('home');
-                setIsDeleteMode(false); 
+                setIsDeleteMode(false);
                 setIsReorderMode(false);
-            }, []); 
+            }, []);
 
             const handleOpenAlbum = useCallback((album) => {
-                saveScrollPosition(); // ИЗ ФАЙЛА 1: Сохраняем позицию
+                saveScrollPosition();
                 setSelectedAlbum(album);
                 setCurrentView('album');
-                setIsDeleteMode(false); 
+                setIsDeleteMode(false);
                 setIsReorderMode(false);
-            }, []); 
+            }, []);
 
             const alertUser = (title, message) => {
-                // Простая реализация модального окна/сообщения
                 console.warn(`[ВНИМАНИЕ ${title}]: ${message}`);
-                // Используем DOM-манипуляцию для отображения сообщения вместо window.alert
                 if (typeof document !== 'undefined') {
                     const tempDiv = document.createElement('div');
                     tempDiv.innerHTML = `
@@ -709,25 +633,21 @@
                 }
             };
 
-
             // --- 2. Получение данных об альбомах (Real-time Listener) ---
             useEffect(() => {
-                // Чтение доступно только после успешной авторизации (наличия userId)
                 if (!db || !userId) {
                     if (!userId && authReady) {
-                        setLoading(false); 
+                        setLoading(false);
                     }
-                    return; 
+                    return;
                 }
 
                 setLoading(true);
 
-                // ИЗМЕНЕНО: Используем публичный путь
                 const collectionPath = `artifacts/${appId}/public/data/${PUBLIC_COLLECTION_NAME}`;
                 const q = query(collection(db, collectionPath));
 
-                const unsubscribe = onSnapshot(q, 
-                    // 1. Success Callback
+                const unsubscribe = onSnapshot(q,
                     (querySnapshot) => {
                         const fetchedAlbums = [];
                         querySnapshot.forEach((doc) => {
@@ -745,20 +665,17 @@
                             if (prevSelectedAlbum) {
                                 const updatedAlbum = fetchedAlbums.find(a => a.id === prevSelectedAlbum.id);
                                 if (updatedAlbum) {
-                                    return updatedAlbum; 
+                                    return updatedAlbum;
                                 }
-                                // Если альбом был удален, возвращаемся на Главную
-                                if (currentView === 'album') { 
-                                    setCurrentView('home'); 
-                                    return null; 
+                                if (currentView === 'album') {
+                                    setCurrentView('home');
+                                    return null;
                                 }
                             }
-                            return prevSelectedAlbum; 
+                            return prevSelectedAlbum;
                         });
-                    
-                    }, 
-                    // 2. Error Callback (перемещен из setSelectedAlbum)
-                    (err) => { 
+                    },
+                    (err) => {
                         console.error("Ошибка получения данных Firestore:", err);
                         setError({
                             name: "Ошибка Загрузки Альбомов",
@@ -766,16 +683,15 @@
                         });
                         setLoading(false);
                     }
-                ); // Конец вызова onSnapshot
+                );
 
                 return () => unsubscribe();
-            }, [userId, authReady, currentView]); // Зависимость от userId гарантирует, что мы ждем успешного входа
+            }, [userId, authReady, currentView]);
 
             // --- 3. CRUD-функции (Только для Администратора) ---
             
-            // **ФУНКЦИЯ ПЕРЕИМЕНОВАНИЯ АЛЬБОМА**
             const renameAlbum = async (albumId, newName) => {
-                saveScrollPosition(); // ИЗ ФАЙЛА 1: Сохраняем позицию
+                saveScrollPosition();
                 if (!isAdmin) {
                     alertUser('Ошибка доступа', 'Вы должны быть Администратором для переименования альбомов.');
                     return false;
@@ -797,7 +713,6 @@
                     console.log(`Альбом ${albumId} переименован в "${newName}"`);
                     handleCloseRenameModal();
                     return true;
-
                 } catch (e) {
                     console.error("Ошибка при переименовании альбома:", e);
                     alertUser('Ошибка', 'Не удалось переименовать альбом.');
@@ -805,10 +720,9 @@
                 }
             };
             
-            // **ОБНОВЛЕНИЕ ПОДПИСИ ФОТОГРАФИИ**
             const updatePhotoCaption = async (albumId, photoTimestamp, newCaption) => {
-                saveScrollPosition(); // ИЗ ФАЙЛА 1: Сохраняем позицию
-                if (!isAdmin) { // ! Проверка Admin
+                saveScrollPosition();
+                if (!isAdmin) {
                     alertUser('Ошибка доступа', 'Вы должны быть Администратором для редактирования подписей.');
                     return;
                 }
@@ -825,7 +739,7 @@
                     
                     if (currentAlbum) {
                         const updatedImages = currentAlbum.images.map(item => {
-                            if (item.timestamp === photoTimestamp && item.type !== 'divider') { 
+                            if (item.timestamp === photoTimestamp && item.type !== 'divider') {
                                 return { ...item, caption: newCaption.trim() };
                             }
                             return item;
@@ -844,21 +758,19 @@
                         
                         console.log(`Подпись для фото ${photoTimestamp} обновлена: "${newCaption}"`);
                     }
-
                 } catch (e) {
                     console.error("Ошибка при обновлении подписи:", e);
                     alertUser('Ошибка', 'Не удалось сохранить подпись.');
                 }
             };
             
-            // **УДАЛЕНИЕ ЭЛЕМЕНТА (ФОТО ИЛИ РАЗДЕЛИТЕЛЬ)**
             const deletePhoto = async (albumId, itemToDelete) => {
-                saveScrollPosition(); // ИЗ ФАЙЛА 1: Сохраняем позицию
-                if (!isAdmin) { // ! Проверка Admin
+                saveScrollPosition();
+                if (!isAdmin) {
                     alertUser('Ошибка доступа', 'Вы должны быть Администратором для удаления элементов.');
                     return;
                 }
-                if (!albumId || !db) { 
+                if (!albumId || !db) {
                     console.error("FIREBASE ERROR: Album ID or DB instance is missing for deletePhoto.");
                     alertUser('Критическая ошибка', 'Не удалось удалить элемент: не инициализирована база данных.');
                     return;
@@ -870,7 +782,6 @@
                     const currentAlbum = albums.find(a => a.id === albumId);
                     
                     if (currentAlbum) {
-                        // Фильтруем элемент по уникальному timestamp
                         const updatedImages = currentAlbum.images.filter(item => item.timestamp !== itemToDelete.timestamp);
                         
                         await updateDoc(albumRef, {
@@ -879,26 +790,21 @@
                         
                         console.log(`Элемент (тип: ${itemToDelete.type || 'photo'}) ${itemToDelete.timestamp} удален.`);
                         
-                        // ИСПРАВЛЕНО: Закрываем модал через handleCloseImage, если удаленный элемент был увеличен
                         if (enlargedImage && enlargedImage.timestamp === itemToDelete.timestamp) {
                             handleCloseImage();
                         }
                     }
-
                 } catch (e) {
                     console.error("Ошибка при удалении элемента:", e);
                     alertUser('Ошибка', 'Не удалось удалить элемент.');
                 }
             };
 
-
-            // **ИЗМЕНЕНИЕ ПОРЯДКА ФОТОГРАФИЙ И РАЗДЕЛИТЕЛЕЙ (DRAG AND DROP)**
             const handleDragStart = useCallback((e, uniqueId) => {
-                if (!isReorderMode || !isAdmin) return; // ! Проверка Admin
-                saveScrollPosition(); // ИЗ ФАЙЛА 1: Сохраняем позицию
+                if (!isReorderMode || !isAdmin) return;
+                saveScrollPosition();
                 dragItemUniqueId.current = uniqueId;
                 e.dataTransfer.effectAllowed = "move";
-                // Установка Drag Image для лучшего UX
                 if (e.dataTransfer.setDragImage) {
                      const dragElement = e.target.closest('div').querySelector('img') || e.target.closest('div').querySelector('h2');
                      if(dragElement) e.dataTransfer.setDragImage(dragElement, 10, 10);
@@ -906,34 +812,33 @@
             }, [isReorderMode, isAdmin]);
 
             const handleDragEnter = useCallback((e, uniqueId) => {
-                if (!isReorderMode || !isAdmin) return; // ! Проверка Admin
+                if (!isReorderMode || !isAdmin) return;
                 dragOverItemUniqueId.current = uniqueId;
             }, [isReorderMode, isAdmin]);
 
             const handleDragOver = useCallback((e) => {
-                if (!isReorderMode || !isAdmin) return; // ! Проверка Admin
+                if (!isReorderMode || !isAdmin) return;
                 e.preventDefault();
             }, [isReorderMode, isAdmin]);
 
             const handleDrop = useCallback(async (e) => {
-                saveScrollPosition(); // ИЗ ФАЙЛА 1: Сохраняем позицию
+                saveScrollPosition();
                 if (!isAdmin) {
                     alertUser('Ошибка доступа', 'Вы должны быть Администратором для изменения порядка.');
                     dragItemUniqueId.current = null;
                     dragOverItemUniqueId.current = null;
                     return;
                 }
-                if (!isReorderMode) { 
-                    return; 
+                if (!isReorderMode) {
+                    return;
                 }
-                if (!selectedAlbum || !db) { 
+                if (!selectedAlbum || !db) {
                     console.error("FIREBASE ERROR: Album or DB instance is missing for handleDrop.");
                     alertUser('Критическая ошибка', 'Не удалось изменить порядок: не инициализирован альбом или база данных.');
                     dragItemUniqueId.current = null;
                     dragOverItemUniqueId.current = null;
                     return;
                 }
-
 
                 const draggedId = dragItemUniqueId.current;
                 const targetId = dragOverItemUniqueId.current;
@@ -959,8 +864,8 @@
                 }
 
                 const itemToMove = list[draggedIndex];
-                list.splice(draggedIndex, 1); 
-                list.splice(targetIndex, 0, itemToMove); 
+                list.splice(draggedIndex, 1);
+                list.splice(targetIndex, 0, itemToMove);
 
                 try {
                     await updateDoc(albumRef, {
@@ -975,16 +880,14 @@
                 dragItemUniqueId.current = null;
                 dragOverItemUniqueId.current = null;
             }, [isReorderMode, isAdmin, selectedAlbum, db]);
-            // ------------------------------------------------------------------
 
-            // **СОЗДАНИЕ РАЗДЕЛИТЕЛЯ**
             const addDivider = async (albumId, text) => {
-                saveScrollPosition(); // ИЗ ФАЙЛА 1: Сохраняем позицию
-                if (!isAdmin) { // ! Проверка Admin
+                saveScrollPosition();
+                if (!isAdmin) {
                     alertUser('Ошибка доступа', 'Вы должны быть Администратором для добавления разделителей.');
                     return;
                 }
-                if (!albumId || !text.trim() || !db) { // ! Проверка db
+                if (!albumId || !text.trim() || !db) {
                     alertUser('Критическая ошибка', 'Не удалось добавить разделитель: не инициализирована база данных.');
                     return;
                 }
@@ -995,32 +898,29 @@
                     
                     const newDividerEntry = {
                         type: 'divider',
-                        timestamp: Date.now(), // Уникальный ID
-                        text: text.trim(), 
+                        timestamp: Date.now(),
+                        text: text.trim(),
                     };
                     
                     await updateDoc(albumRef, {
-                        images: arrayUnion(newDividerEntry) 
+                        images: arrayUnion(newDividerEntry)
                     });
 
                     setIsAddDividerModalOpen(false);
                     console.log(`Разделитель "${text}" добавлен в альбом ${albumId}.`);
-
                 } catch (e) {
                     console.error("Ошибка при добавлении разделителя:", e);
                     alertUser('Ошибка', 'Не удалось добавить текстовый разделитель.');
                 }
             };
 
-
-            // Создание нового альбома
             const createNewAlbum = async (name) => {
-                saveScrollPosition(); // ИЗ ФАЙЛА 1: Сохраняем позицию
-                if (!isAdmin) { // ! Проверка Admin
+                saveScrollPosition();
+                if (!isAdmin) {
                     alertUser('Ошибка доступа', 'Вы должны быть Администратором для создания альбомов.');
                     return;
                 }
-                if (!name.trim() || !db) { // ! Проверка db
+                if (!name.trim() || !db) {
                     alertUser('Критическая ошибка', 'Не удалось создать альбом: не инициализирована база данных.');
                     return;
                 }
@@ -1028,8 +928,8 @@
                 const albumData = {
                     name: name.trim(),
                     createdAt: serverTimestamp(),
-                    images: [], 
-                    previewUrl: null 
+                    images: [],
+                    previewUrl: null
                 };
                 try {
                     const collectionPath = `artifacts/${appId}/public/data/${PUBLIC_COLLECTION_NAME}`;
@@ -1042,14 +942,13 @@
                 }
             };
 
-            // Добавление ссылки на фото в альбом
             const addPhotoLink = async (albumId, url, aspectRatio = 1.0) => {
-                saveScrollPosition(); // ИЗ ФАЙЛА 1: Сохраняем позицию
-                if (!isAdmin) { // ! Проверка Admin
+                saveScrollPosition();
+                if (!isAdmin) {
                     alertUser('Ошибка доступа', 'Вы должны быть Администратором для добавления фото.');
                     return;
                 }
-                if (!albumId || !url.trim() || !db) { // ! Проверка db
+                if (!albumId || !url.trim() || !db) {
                     alertUser('Критическая ошибка', 'Не удалось добавить фото: не инициализирована база данных.');
                     return;
                 }
@@ -1061,19 +960,17 @@
                     const newImageEntry = {
                         url: url.trim(),
                         type: 'photo',
-                        timestamp: Date.now(), // Уникальный ID
-                        aspectRatio: parseFloat(aspectRatio) > 0 ? parseFloat(aspectRatio) : 1.0, 
-                        caption: '' 
+                        timestamp: Date.now(),
+                        aspectRatio: parseFloat(aspectRatio) > 0 ? parseFloat(aspectRatio) : 1.0,
+                        caption: ''
                     };
                     
-                    // 1. Обновление Firestore
                     await updateDoc(albumRef, {
                         images: arrayUnion(newImageEntry)
                     });
 
                     setIsAddPhotoModalOpen(false);
                     console.log(`Ссылка добавлена в альбом ${albumId}.`);
-
                 } catch (e) {
                     console.error("Ошибка при добавлении ссылки:", e);
                     alertUser('Ошибка', 'Не удалось добавить ссылку на фото. Убедитесь, что ссылка корректна.');
@@ -1082,10 +979,8 @@
 
             // --- Вспомогательные компоненты ---
             const AlbumCard = ({ album }) => {
-                // Находим самое первое фото, игнорируя любые сохраненные previewUrl
                 const firstPhoto = album.images.find(item => item.type !== 'divider' && item.url);
                 const previewUrl = firstPhoto ? firstPhoto.url : null;
-                
                 const imageCount = album.images.filter(item => item.type !== 'divider').length;
                 
                 return (
@@ -1112,7 +1007,6 @@
                             </div>
                         </div>
                         
-                        {/* Кнопка переименования (Только для Admin) */}
                         {isAdmin && (
                             <button
                                 onClick={(e) => { 
@@ -1164,7 +1058,6 @@
                 );
             };
             
-            // --- Модал для переименования альбома ---
             const RenameAlbumModal = () => {
                 const [newName, setNewName] = useState(albumToRename?.name || '');
                 const [isSaving, setIsSaving] = useState(false);
@@ -1209,17 +1102,14 @@
                     </Modal>
                 );
             };
-            // ----------------------------------------------
             
-            // --- Модал для входа администратора ---
             const AdminLoginModal = () => {
-
                 const [email, setEmail] = useState('');
                 const [password, setPassword] = useState('');
 
                 const handleSubmit = (e) => {
                     e.preventDefault();
-                    handleAdminLogin(email, password); // функция из app.jsx
+                    handleAdminLogin(email, password);
                     setPassword('');
                 };
 
@@ -1230,8 +1120,6 @@
                         title="Вход Администратора"
                     >
                         <form onSubmit={handleSubmit} className="space-y-4">
-
-                            {/* Поле для email */}
                             <input
                                 type="email"
                                 value={email}
@@ -1240,8 +1128,6 @@
                                 className="w-full p-3 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500"
                                 required
                             />
-
-                            {/* Поле для пароля */}
                             <input
                                 type="password"
                                 value={password}
@@ -1250,7 +1136,6 @@
                                 className="w-full p-3 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500"
                                 required
                             />
-
                             <div className="flex justify-end mt-4 space-x-3">
                                 <button
                                     type="button"
@@ -1270,9 +1155,6 @@
                     </Modal>
                 );
             };
-
-            // ----------------------------------------------
-
 
             const AddAlbumModal = () => {
                 const [albumName, setAlbumName] = useState('');
@@ -1344,7 +1226,6 @@
                 );
             };
 
-
             const AddPhotoModal = () => {
                 const [photoUrl, setPhotoUrl] = useState('');
                 const [aspectRatio, setAspectRatio] = useState('1.0');
@@ -1364,13 +1245,11 @@
                 const handleSubmit = (e) => {
                     e.preventDefault();
                     if (selectedAlbumId && photoUrl.trim()) {
-                        const ratio = parseFloat(aspectRatio.replace(',', '.')); 
-
+                        const ratio = parseFloat(aspectRatio.replace(',', '.'));
                         if (isNaN(ratio) || ratio <= 0) {
                              alertUser('Ошибка', 'Некорректное соотношение сторон. Введите число > 0.');
                              return;
                         }
-                        
                         addPhotoLink(selectedAlbumId, photoUrl, ratio);
                         setPhotoUrl('');
                         setAspectRatio('1.0');
@@ -1381,15 +1260,14 @@
                 const handleUrlChange = (e) => {
                     const url = e.target.value;
                     setPhotoUrl(url);
-                    setPreviewImage(null); 
+                    setPreviewImage(null);
                     if (url.startsWith('http')) {
                         setPreviewImage(url);
                     }
                 };
-                // --- АВТО-РАСЧЁТ ПРОПОРЦИЙ ---
+
                 useEffect(() => {
                     if (!previewImage) return;
-
                     const img = new Image();
                     img.onload = () => {
                         if (img.naturalWidth && img.naturalHeight) {
@@ -1419,7 +1297,6 @@
                                         required
                                     />
                                 </div>
-                                
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-1">Соотношение сторон (Ширина/Высота)</label>
                                     <input
@@ -1434,7 +1311,6 @@
                                         Обязательно укажите число: 1.0 (квадрат), 1.77 (16:9), 0.56 (9:16). 
                                     </p>
                                 </div>
-                                
                                 {previewImage && (
                                     <div className="p-3 bg-gray-50 rounded-lg border border-gray-200">
                                         <p className="text-xs text-gray-600 mb-2">Предпросмотр:</p>
@@ -1446,7 +1322,6 @@
                                         />
                                     </div>
                                 )}
-
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-1">Выбрать альбом</label>
                                     <select
@@ -1462,7 +1337,6 @@
                                     {albums.length === 0 && <p className="text-red-500 text-xs mt-1">Создайте альбом, чтобы добавить фото.</p>}
                                 </div>
                             </div>
-
                             <div className="flex justify-end mt-6 space-x-3">
                                 <button type="button" onClick={() => setIsAddPhotoModalOpen(false)} className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition">
                                     Отмена
@@ -1480,8 +1354,7 @@
                 );
             };
             
-            // Вид: Сетка фото в альбоме (Justified Gallery)
-            const AlbumPhotoView = () => {
+            const AlbumPhotoView = ({ onOpenImage }) => {
                 if (!selectedAlbum) return <HomeView />;
 
                 const albumRef = useRef(null);
@@ -1491,20 +1364,18 @@
                     if (albumRef.current) {
                         setContainerWidth(albumRef.current.clientWidth);
                     }
-                }, []); 
+                }, []);
 
                 useEffect(() => {
                     updateWidth();
-                    
                     const resizeObserver = new ResizeObserver(updateWidth);
                     if (albumRef.current) {
                         resizeObserver.observe(albumRef.current);
                     }
-                    
                     return () => {
-                        resizeObserver.disconnect(); 
+                        resizeObserver.disconnect();
                     };
-                }, [updateWidth]); 
+                }, [updateWidth]);
 
                 const allContent = selectedAlbum.images;
 
@@ -1513,7 +1384,7 @@
                     
                     const rows = [];
                     let currentRow = [];
-                    let currentRowTotalAspect = 0; 
+                    let currentRowTotalAspect = 0;
                     
                     const calculateGapWidth = (count) => (count - 1) * GALLERY_GAP_PX;
 
@@ -1529,7 +1400,7 @@
                         if (!isLastRow) {
                             const maxHeight = TARGET_ROW_HEIGHT * MAX_ROW_HEIGHT_MULTIPLIER;
                             if (finalRowHeight > maxHeight) {
-                                finalRowHeight = maxHeight; 
+                                finalRowHeight = maxHeight;
                             }
                         } else {
                             if (finalRowHeight > TARGET_ROW_HEIGHT * 1.2) {
@@ -1554,18 +1425,14 @@
                                 currentRowTotalAspect = 0;
                             }
                             rows.push({ type: 'dividerRow', content: item, uniqueId: item.timestamp });
-
                         } else if (item.aspectRatio > 0 && item.url) {
                             const potentialAspect = currentRowTotalAspect + item.aspectRatio;
                             const rowCount = currentRow.length + 1;
                             const potentialRowHeight = (containerWidth - calculateGapWidth(rowCount)) / potentialAspect;
-
-                            // Условие для начала новой строки: если высота становится слишком маленькой (т.е. слишком много элементов в строке)
-                            const shouldStartNewRow = currentRow.length > 0 && potentialRowHeight < TARGET_ROW_HEIGHT * 0.9; 
+                            const shouldStartNewRow = currentRow.length > 0 && potentialRowHeight < TARGET_ROW_HEIGHT * 0.9;
 
                             if (shouldStartNewRow) {
                                 finalizePhotoRow(currentRow);
-
                                 currentRow = [item];
                                 currentRowTotalAspect = item.aspectRatio;
                             } else {
@@ -1580,40 +1447,37 @@
                     }
                     
                     return rows;
-
                 }, [allContent, containerWidth]);
-
 
                 const isDraggingCurrent = (uniqueId) => isReorderMode && dragItemUniqueId.current === uniqueId;
                 const isDragOverTarget = (uniqueId) => isReorderMode && dragOverItemUniqueId.current === uniqueId && dragItemUniqueId.current !== uniqueId;
 
-
                 return (
-                    <div className="py-6 md:py-10 pt-4 md:pt-6"> 
+                    <div className="py-6 md:py-10 pt-4 md:pt-6">
                         <div 
                             ref={albumRef}
                             className="w-full" 
-                            onDrop={isReorderMode && isAdmin ? handleDrop : undefined} // Только если режим активен
-                            onDragOver={isReorderMode && isAdmin ? handleDragOver : undefined} // Только если режим активен
+                            onDrop={isReorderMode && isAdmin ? handleDrop : undefined}
+                            onDragOver={isReorderMode && isAdmin ? handleDragOver : undefined}
                         >
                             {containerWidth === 0 && allContent.length > 0 && <CalculationSpinner />}
                             
-                            {/* Рендеринг Justified Gallery / Разделителей */}
                             {(containerWidth > 0 && justifiedRows.length > 0) && justifiedRows.map((rowWrapper) => {
-                                const key = rowWrapper.uniqueId; 
+                                const key = rowWrapper.uniqueId;
 
                                 if (rowWrapper.type === 'dividerRow') {
                                     const divider = rowWrapper.content;
                                     return (
                                         <div 
                                             key={key} 
-                                            className={`
-                                                w-full my-8 flex items-center justify-center relative 
-                                                ${isReorderMode ? 'cursor-grab py-2' : ''}
-                                                ${isDraggingCurrent(divider.timestamp) ? 'opacity-50 border-2 border-indigo-500 scale-[0.98]' : ''}
-                                                ${isDragOverTarget(divider.timestamp) ? 'border-2 border-dashed border-green-500' : ''}
-                                            `}
-                                            draggable={isReorderMode && isAdmin} // ! Перетаскивание только для Admin
+                                            className={`w-full my-8 flex items-center justify-center relative ${
+                                                isReorderMode ? 'cursor-grab py-2' : ''
+                                            } ${
+                                                isDraggingCurrent(divider.timestamp) ? 'opacity-50 border-2 border-indigo-500 scale-[0.98]' : ''
+                                            } ${
+                                                isDragOverTarget(divider.timestamp) ? 'border-2 border-dashed border-green-500' : ''
+                                            }`}
+                                            draggable={isReorderMode && isAdmin}
                                             onDragStart={isReorderMode && isAdmin ? (e) => handleDragStart(e, divider.timestamp) : undefined}
                                             onDragEnter={isReorderMode && isAdmin ? (e) => handleDragEnter(e, divider.timestamp) : undefined}
                                         >
@@ -1623,7 +1487,6 @@
                                             </h2>
                                             <div className="w-full h-px bg-gray-300 mx-4 hidden sm:block"></div>
                                             
-                                            {/* ИНДИКАТОР ПЕРЕТАСКИВАНИЯ (Только для Admin) */}
                                             {isReorderMode && isAdmin && (
                                                 <div 
                                                     className="absolute top-1/2 left-2 transform -translate-y-1/2 bg-black/50 text-white p-1 rounded-full opacity-100 transition duration-200 cursor-grab z-20"
@@ -1632,8 +1495,7 @@
                                                     <GripVertical className="h-4 w-4" />
                                                 </div>
                                             )}
-                                             {/* КНОПКА УДАЛЕНИЯ РАЗДЕЛИТЕЛЯ (Только для Admin) */}
-                                             {isDeleteMode && isAdmin && (
+                                            {isDeleteMode && isAdmin && (
                                                 <button
                                                     onClick={(e) => { 
                                                         e.stopPropagation(); 
@@ -1649,34 +1511,30 @@
                                     );
                                 }
 
-                                // --- РЕНДЕР: РЯД ФОТОГРАФИЙ ---
                                 const row = rowWrapper.content;
                                 return (
                                     <div
                                         key={key}
                                         className="flex overflow-hidden"
-                                        style={{ marginBottom: `${GALLERY_GAP_PX}px` }} 
+                                        style={{ marginBottom: `${GALLERY_GAP_PX}px` }}
                                     >
                                         {row.map((image, imageIndex) => {
-                                            const uniqueId = image.timestamp; 
+                                            const uniqueId = image.timestamp;
 
                                             return (
                                                 <div 
                                                     key={uniqueId} 
-                                                    // ИСПРАВЛЕНО: используем handleOpenImage из App
-                                                    onClick={!isDeleteMode && !isReorderMode ? () => handleOpenImage(image) : undefined}
-                                                    
-                                                    // Атрибуты Drag and Drop (Только для Admin)
+                                                    onClick={!isDeleteMode && !isReorderMode ? () => onOpenImage(image) : undefined}
                                                     draggable={isReorderMode && isAdmin}
                                                     onDragStart={isReorderMode && isAdmin ? (e) => handleDragStart(e, uniqueId) : undefined}
                                                     onDragEnter={isReorderMode && isAdmin ? (e) => handleDragEnter(e, uniqueId) : undefined}
-
-                                                    className={`
-                                                        cursor-pointer relative overflow-hidden bg-gray-200 transition duration-150 shadow-md 
-                                                        ${isReorderMode && isAdmin ? 'cursor-grab active:cursor-grabbing' : 'hover:opacity-90'}
-                                                        ${isDraggingCurrent(uniqueId) ? 'opacity-50 border-4 border-indigo-500 scale-95' : ''}
-                                                        ${isDragOverTarget(uniqueId) ? 'border-4 border-dashed border-green-500' : ''}
-                                                    `}
+                                                    className={`cursor-pointer relative overflow-hidden bg-gray-200 transition duration-150 shadow-md ${
+                                                        isReorderMode && isAdmin ? 'cursor-grab active:cursor-grabbing' : 'hover:opacity-90'
+                                                    } ${
+                                                        isDraggingCurrent(uniqueId) ? 'opacity-50 border-4 border-indigo-500 scale-95' : ''
+                                                    } ${
+                                                        isDragOverTarget(uniqueId) ? 'border-4 border-dashed border-green-500' : ''
+                                                    }`}
                                                     style={{
                                                         height: `${image.height}px`,
                                                         width: `${image.width}px`,
@@ -1694,7 +1552,6 @@
                                                         }}
                                                     />
                                                     
-                                                    {/* КНОПКА УДАЛЕНИЯ (Только для Admin) */}
                                                     {isDeleteMode && isAdmin && (
                                                         <button
                                                             onClick={(e) => { 
@@ -1708,7 +1565,6 @@
                                                         </button>
                                                     )}
 
-                                                    {/* ИНДИКАТОР ПЕРЕТАСКИВАНИЯ (Только для Admin) */}
                                                     {isReorderMode && isAdmin && (
                                                         <div 
                                                             className="absolute top-1/2 left-2 transform -translate-y-1/2 bg-black/50 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition duration-200 cursor-grab z-20"
@@ -1723,12 +1579,10 @@
                                     </div>
                                 );
                             })}
-
                         </div>
 
-
                         {allContent.length === 0 && (
-                             <div className="mx-4 sm:mx-6 lg:mx-8 text-center py-20 bg-gray-50 rounded-xl mt-8 border border-dashed border-gray-300"> 
+                             <div className="mx-4 sm:mx-6 lg:mx-8 text-center py-20 bg-gray-50 rounded-xl mt-8 border border-dashed border-gray-300">
                                 <ImageIcon className="w-12 h-12 text-gray-400 mx-auto" />
                                 <h3 className="mt-2 text-lg font-medium text-gray-900">Этот альбом пуст</h3>
                                 {isAdmin && (
@@ -1747,7 +1601,6 @@
                 );
             };
 
-            // --- Вид: Главная страница (Список альбомов) ---
             const HomeView = () => (
                 <div className="px-4 sm:px-6 lg:px-8 py-8">
                     <h2 className="text-3xl font-extrabold text-gray-900 mb-8 border-b pb-2">Все альбомы</h2>
@@ -1771,9 +1624,7 @@
                     )}
                 </div>
             );
-            // --- Общий рендеринг ---
 
-            // Увеличение, чтобы отобразить критические ошибки
             if (error && error.isCritical) {
                 return (
                     <div className="flex items-center justify-center min-h-screen bg-gray-100 p-4">
@@ -1791,7 +1642,6 @@
             }
 
             if (error && !error.isCritical) {
-                // Рендеринг для некритической ошибки (например, не удалось загрузить альбом или ошибка аутентификации)
                 return (
                     <div className="p-8 text-center text-red-600 bg-red-100 rounded-xl m-10">
                         <strong>{error.name || 'Ошибка'}:</strong> {error.message || 'Произошла неизвестная ошибка.'}
@@ -1801,18 +1651,14 @@
 
             return (
                 <div className="min-h-screen bg-gray-50 font-sans">
-                    
-                    {/* Header / Top Bar */}
                     <header className="bg-white shadow-md sticky top-0 z-10">
                         <div className="px-4 sm:px-6 lg:px-8 py-3 flex justify-between items-center">
-                            
-                            {/* ЛЕВАЯ ЧАСТЬ: Логотип + Навигация по альбому */}
                             <div className="flex items-center">
                                 <div className="flex items-center">
                                     <h1 className="text-3xl font-bold flex items-center">
-  <img src="https://lh3.googleusercontent.com/pw/AP1GczPF0dFAtwx7eDD_mrrrIwaD1QJbvoSuDsnIg01fnRExuJrtZe0ZmhsofzhK7k9L0_0WrAnV1FtTSAfva4dx6we2GidqtHd5V2HSLAzeyDahzmxa4dW8h3uoszZzAEJkMlZQYa_HRV4cBrkO3weGaIjg0A=w180-h180-s-no?authuser=0" alt="Логотип" className="inline-block w-6 h-6 mr-2 align-middle" />
-  <span className="text-xl font-bold text-gray-800">Leon H-Arts</span>
-</h1>
+                                        <img src="https://lh3.googleusercontent.com/pw/AP1GczPF0dFAtwx7eDD_mrrrIwaD1QJbvoSuDsnIg01fnRExuJrtZe0ZmhsofzhK7k9L0_0WrAnV1FtTSAfva4dx6we2GidqtHd5V2HSLAzeyDahzmxa4dW8h3uoszZzAEJkMlZQYa_HRV4cBrkO3weGaIjg0A=w180-h180-s-no?authuser=0" alt="Логотип" className="inline-block w-6 h-6 mr-2 align-middle" />
+                                        <span className="text-xl font-bold text-gray-800">Leon H-Arts</span>
+                                    </h1>
                                 </div>
 
                                 {currentView === 'album' && selectedAlbum && (
@@ -1831,10 +1677,7 @@
                                 )}
                             </div>
                             
-                            {/* ПРАВАЯ ЧАСТЬ: Кнопки действий */}
                             <div className="flex items-center space-x-3">
-
-                                {/* --- КНОПКИ РЕЖИМОВ РЕДАКТИРОВАНИЯ (Только в режиме альбома И для Admin) --- */}
                                 {isAdmin && currentView === 'album' && selectedAlbum && (
                                     <>
                                         <button
@@ -1870,8 +1713,6 @@
                                     </>
                                 )}
 
-
-                                {/* --- КНОПКИ ДОБАВЛЕНИЯ (Только для Admin) --- */}
                                 {isAdmin && (
                                     <>
                                         <button
@@ -1892,7 +1733,6 @@
                                     </>
                                 )}
                                 
-                                {/* --- КНОПКА АДМИНА (Login/Logout) --- */}
                                 {!isAdmin && (
                                     <button
                                         onClick={() => setIsLoginModalOpen(true)}
@@ -1907,42 +1747,32 @@
                         </div>
                     </header>
 
-                    {/* Main Content */}
                     <main className="pb-12">
-                        {/* ИСПРАВЛЕНО: AlbumPhotoView теперь не принимает props, 
-                            т.к. он внутри App и имеет доступ к handleOpenImage */}
-                        {currentView === 'home' ? <HomeView /> : <AlbumPhotoView />}
+                        {currentView === 'home' ? <HomeView /> : <AlbumPhotoView onOpenImage={handleOpenImage} />}
                     </main>
 
-                    {/* Modals */}
-                    <AdminLoginModal /> 
+                    <AdminLoginModal />
                     <RenameAlbumModal />
                     <AddAlbumModal />
                     <AddPhotoModal />
-                    <AddDividerModal /> 
+                    <AddDividerModal />
                     
-                    {/* Модал: Увеличенное изображение с редактированием подписи */}
-                    {/* ИСПРАВЛЕНО: onClose теперь handleCloseImage, onSaveScrollPosition удален */}
                     <ImageModal 
-                        image={enlargedImage} 
-                        onClose={handleCloseImage} 
+                        image={enlargedImage}
+                        onClose={handleCloseImage}
                         onSaveCaption={updatePhotoCaption}
-                        albumId={selectedAlbum?.id} 
+                        albumId={selectedAlbum?.id}
                         onNext={handleNextImage}
                         onPrev={handlePrevImage}
-                        isAdmin={isAdmin} 
+                        isAdmin={isAdmin}
                     />
-
                 </div>
             );
         };
         
-        // Рендеринг приложения
         const container = document.getElementById('root');
-        // Используем createRoot для React 18+
         const root = ReactDOM.createRoot(container);
         root.render(<App />);
-
     </script>
 </body>
 </html>
