@@ -461,6 +461,27 @@
                 }, 1);
             }, []);
 
+            // === ДОБАВЛЕНО: Функции для открытия модальных окон с сохранением позиции ===
+            const handleOpenAddPhotoModal = useCallback(() => {
+                saveScrollPosition();
+                setIsAddPhotoModalOpen(true);
+            }, []);
+
+            const handleOpenAddAlbumModal = useCallback(() => {
+                saveScrollPosition();
+                setIsAddAlbumModalOpen(true);
+            }, []);
+
+            const handleOpenAddDividerModal = useCallback(() => {
+                saveScrollPosition();
+                setIsAddDividerModalOpen(true);
+            }, []);
+
+            const handleOpenLoginModal = useCallback(() => {
+                saveScrollPosition();
+                setIsLoginModalOpen(true);
+            }, []);
+
             // --- 1. Аутентификация и Настройка ---
             useEffect(() => {
                 if (error && error.isCritical) {
@@ -1703,7 +1724,7 @@
                                         </button>
                                         
                                         <button
-                                            onClick={() => setIsAddDividerModalOpen(true)}
+                                            onClick={handleOpenAddDividerModal}
                                             className="p-2 border border-gray-300 text-sm font-medium rounded-full text-gray-700 bg-white hover:bg-gray-100 transition shadow-sm"
                                             title="Добавить разделитель (Глава)"
                                             disabled={isDeleteMode || isReorderMode}
@@ -1716,7 +1737,7 @@
                                 {isAdmin && (
                                     <>
                                         <button
-                                            onClick={() => setIsAddPhotoModalOpen(true)}
+                                            onClick={handleOpenAddPhotoModal}
                                             className="flex items-center p-2 border border-gray-300 text-sm font-medium rounded-full shadow-sm text-gray-700 bg-white hover:bg-gray-100 transition"
                                             disabled={isDeleteMode || isReorderMode}
                                             title="Добавить фото"
@@ -1724,7 +1745,7 @@
                                             <ImageIcon className="h-5 w-5" />
                                         </button>
                                         <button
-                                            onClick={() => setIsAddAlbumModalOpen(true)}
+                                            onClick={handleOpenAddAlbumModal}
                                             className="flex items-center p-2 border border-gray-300 text-sm font-medium rounded-full text-gray-700 bg-white hover:bg-gray-100 transition shadow-sm"
                                             title="Создать альбом"
                                         >
@@ -1735,7 +1756,7 @@
                                 
                                 {!isAdmin && (
                                     <button
-                                        onClick={() => setIsLoginModalOpen(true)}
+                                        onClick={handleOpenLoginModal}
                                         className="flex items-center px-4 py-2 border border-indigo-300 text-sm font-medium rounded-full text-indigo-700 bg-indigo-100 hover:bg-indigo-200 transition shadow-sm"
                                         title="Войти как Администратор"
                                     >
