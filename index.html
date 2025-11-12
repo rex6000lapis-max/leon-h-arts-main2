@@ -262,22 +262,25 @@
                 setCaption(image.caption || '');
             }, [image.caption]);
 
+            const handleKeyDown = useCallback((e) => {
+                if (e.key === 'Escape') {
+                    onSaveScrollPosition();
+                    onClose();
+                } else if (e.key === 'ArrowRight') {
+                    onSaveScrollPosition();
+                    onNext();
+                } else if (e.key === 'ArrowLeft') {
+                    onSaveScrollPosition();
+                    onPrev();
+                }
+            }, [onClose, onNext, onPrev, onSaveScrollPosition]);
+
             useEffect(() => {
-                const handleKeyDown = (e) => {
-                    if (e.key === 'Escape') {
-                        onSaveScrollPosition();
-                        onClose();
-                    } else if (e.key === 'ArrowRight') {
-                        onNext();
-                    } else if (e.key === 'ArrowLeft') {
-                        onPrev();
-                    }
-                };
                 document.addEventListener('keydown', handleKeyDown);
                 return () => {
                     document.removeEventListener('keydown', handleKeyDown);
                 };
-            }, [onClose, onNext, onPrev, onSaveScrollPosition]);
+            }, [handleKeyDown]);
 
 
             const handleSave = async () => {
@@ -290,10 +293,10 @@
                 setIsSaving(false);
             };
 
-            const handleClose = () => {
+            const handleClose = useCallback(() => {
                 onSaveScrollPosition();
                 onClose();
-            };
+            }, [onSaveScrollPosition, onClose]);
 
             return (
                 <div 
@@ -326,7 +329,7 @@
                     {/* --- Левая/Правая навигация --- */}
                     <div 
                         className="fixed-click-zone left group"
-                        onClick={(e) => { e.stopPropagation(); onPrev(); }}
+                        onClick={(e) => { e.stopPropagation(); onSaveScrollPosition(); onPrev(); }}
                         title="Предыдущее фото (Стрелка влево)"
                     >
                         <button className="nav-arrow opacity-0 group-hover:opacity-100 transition-opacity">
@@ -335,7 +338,7 @@
                     </div>
                     <div 
                         className="fixed-click-zone right group"
-                        onClick={(e) => { e.stopPropagation(); onNext(); }}
+                        onClick={(e) => { e.stopPropagation(); onSaveScrollPosition(); onNext(); }}
                         title="Следующее фото (Стрелка вправо)"
                     >
                         <button className="nav-arrow opacity-0 group-hover:opacity-100 transition-opacity">
@@ -418,45 +421,44 @@
             // === УЛУЧШЕННАЯ СИСТЕМА СОХРАНЕНИЯ ПОЗИЦИИ ПРОКРУТКИ ===
             const scrollPosition = useRef(0);
             const shouldRestoreScroll = useRef(false);
-            const scrollRestoreTimeout = useRef(null);
 
-            const saveScrollPosition = () => {
+            const saveScrollPosition = useCallback(() => {
                 scrollPosition.current = window.scrollY || document.documentElement.scrollTop;
                 shouldRestoreScroll.current = true;
                 console.log('Scroll position saved:', scrollPosition.current);
-            };
+            }, []);
 
-            const restoreScrollPosition = () => {
+            const restoreScrollPosition = useCallback(() => {
                 if (shouldRestoreScroll.current && scrollPosition.current > 0) {
                     console.log('Restoring scroll to:', scrollPosition.current);
                     
-                    // Очищаем предыдущий таймаут
-                    if (scrollRestoreTimeout.current) {
-                        clearTimeout(scrollRestoreTimeout.current);
-                    }
-                    
-                    // Пробуем несколько раз с разными задержками
-                    scrollRestoreTimeout.current = setTimeout(() => {
+                    // Используем requestAnimationFrame для надежного восстановления
+                    requestAnimationFrame(() => {
                         window.scrollTo({
                             top: scrollPosition.current,
                             behavior: 'auto'
                         });
                         
-                        // Второй раз для надежности
+                        // Дополнительная проверка через небольшой интервал
                         setTimeout(() => {
-                            window.scrollTo({
-                                top: scrollPosition.current,
-                                behavior: 'auto'
-                            });
+                            const currentScroll = window.scrollY || document.documentElement.scrollTop;
+                            if (Math.abs(currentScroll - scrollPosition.current) > 50) {
+                                window.scrollTo({
+                                    top: scrollPosition.current,
+                                    behavior: 'auto'
+                                });
+                            }
                             shouldRestoreScroll.current = false;
                         }, 50);
-                    }, 100);
+                    });
                 }
-            };
+            }, []);
 
-            // Восстанавливаем позицию после любых изменений состояния
+            // Восстанавливаем позицию после рендера
             useEffect(() => {
-                restoreScrollPosition();
+                if (shouldRestoreScroll.current) {
+                    restoreScrollPosition();
+                }
             });
 
             // Используем '|| false' для authReady, чтобы убедиться, что состояние определено
@@ -559,14 +561,14 @@
                 saveScrollPosition();
                 setAlbumToRename(album);
                 setIsRenameModalOpen(true);
-            }, [isAdmin]);
+            }, [isAdmin, saveScrollPosition]);
 
             // Функция для закрытия модала переименования
             const handleCloseRenameModal = useCallback(() => {
                 saveScrollPosition();
                 setIsRenameModalOpen(false);
                 setAlbumToRename(null);
-            }, []);
+            }, [saveScrollPosition]);
 
             // --- ЛОГИКА АДМИНИСТРАТОРА (Login/Logout) ---
             const handleAdminLogin = async (email, password) => {
@@ -620,8 +622,15 @@
                 setEnlargedImage(nextImage);
             }, [enlargedImage, selectedAlbum]);
 
-            const handleNextImage = useCallback(() => handleNavigation('next'), [handleNavigation]);
-            const handlePrevImage = useCallback(() => handleNavigation('prev'), [handleNavigation]);
+            const handleNextImage = useCallback(() => {
+                saveScrollPosition();
+                handleNavigation('next');
+            }, [saveScrollPosition, handleNavigation]);
+
+            const handlePrevImage = useCallback(() => {
+                saveScrollPosition();
+                handleNavigation('prev');
+            }, [saveScrollPosition, handleNavigation]);
             // --------------------------------------------------
 
             // Управление режимами редактирования
@@ -632,7 +641,7 @@
                 if (!isDeleteMode) { 
                     setIsReorderMode(false); // Отключаем переупорядочивание
                 }
-            }, [isDeleteMode, isAdmin]);
+            }, [isDeleteMode, isAdmin, saveScrollPosition]);
 
             const toggleReorderMode = useCallback(() => {
                 if (!isAdmin) return; // ! Проверка Admin
@@ -641,7 +650,7 @@
                 if (!isReorderMode) { 
                     setIsDeleteMode(false); // Отключаем удаление
                 }
-            }, [isReorderMode, isAdmin]);
+            }, [isReorderMode, isAdmin, saveScrollPosition]);
             // -----------------------------------------
 
             const handleGoHome = useCallback(() => {
@@ -650,7 +659,7 @@
                 setCurrentView('home');
                 setIsDeleteMode(false); 
                 setIsReorderMode(false);
-            }, []); 
+            }, [saveScrollPosition]); 
 
             const handleOpenAlbum = useCallback((album) => {
                 saveScrollPosition();
@@ -658,17 +667,13 @@
                 setCurrentView('album');
                 setIsDeleteMode(false); 
                 setIsReorderMode(false);
-            }, []); 
+            }, [saveScrollPosition]); 
 
             // ОБНОВЛЕННАЯ ФУНКЦИЯ ДЛЯ ЗАКРЫТИЯ МОДАЛЬНОГО ОКНА ИЗОБРАЖЕНИЯ
             const handleCloseImageModal = useCallback(() => {
                 saveScrollPosition();
                 setEnlargedImage(null);
-                // Дополнительное восстановление через небольшой таймаут
-                setTimeout(() => {
-                    restoreScrollPosition();
-                }, 50);
-            }, []);
+            }, [saveScrollPosition]);
 
             const alertUser = (title, message) => {
                 // Простая реализация модального окна/сообщения
@@ -881,7 +886,7 @@
                      const dragElement = e.target.closest('div').querySelector('img') || e.target.closest('div').querySelector('h2');
                      if(dragElement) e.dataTransfer.setDragImage(dragElement, 10, 10);
                 }
-            }, [isReorderMode, isAdmin]);
+            }, [isReorderMode, isAdmin, saveScrollPosition]);
 
             const handleDragEnter = useCallback((e, uniqueId) => {
                 if (!isReorderMode || !isAdmin) return; // ! Проверка Admin
@@ -952,7 +957,7 @@
                 
                 dragItemUniqueId.current = null;
                 dragOverItemUniqueId.current = null;
-            }, [isReorderMode, isAdmin, selectedAlbum, db]);
+            }, [isReorderMode, isAdmin, selectedAlbum, db, saveScrollPosition]);
             // ------------------------------------------------------------------
 
             // **СОЗДАНИЕ РАЗДЕЛИТЕЛЯ**
@@ -1052,7 +1057,7 @@
                     setIsAddPhotoModalOpen(false);
                     console.log(`Ссылка добавлена в альбом ${albumId}.`);
                     
-                    // ДОПОЛНИТЕЛЬНОЕ ВОССТАНОВЛЕНИЕ ПОЗИЦИИ ПОСЛЕ ДОБАВЛЕНИЯ ФОТО
+                    // Восстанавливаем позицию после успешного добавления
                     setTimeout(() => {
                         restoreScrollPosition();
                     }, 100);
@@ -1132,7 +1137,7 @@
                     if (isOpen) {
                         saveScrollPosition();
                     }
-                }, [isOpen]);
+                }, [isOpen, saveScrollPosition]);
 
                 if (!isOpen) return null;
                 
