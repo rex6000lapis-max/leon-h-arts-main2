@@ -398,31 +398,23 @@
 
         // Главный компонент приложения
         const App = () => {
-            // === СИСТЕМА СОХРАНЕНИЯ ПОЗИЦИИ ПРОКРУТКИ ===
+            // === УПРОЩЕННАЯ СИСТЕМА СОХРАНЕНИЯ ПОЗИЦИИ ПРОКРУТКИ ===
             const scrollPosition = useRef(0);
-            const shouldRestoreScroll = useRef(false);
 
             const saveScrollPosition = () => {
                 scrollPosition.current = window.scrollY || document.documentElement.scrollTop;
-                shouldRestoreScroll.current = true;
             };
 
             const restoreScrollPosition = () => {
-                if (shouldRestoreScroll.current && scrollPosition.current > 0) {
+                if (scrollPosition.current > 0) {
                     setTimeout(() => {
                         window.scrollTo({
                             top: scrollPosition.current,
                             behavior: 'auto'
                         });
-                        shouldRestoreScroll.current = false;
-                    }, 100);
+                    }, 10);
                 }
             };
-
-            // Восстанавливаем позицию после любых изменений состояния
-            useEffect(() => {
-                restoreScrollPosition();
-            });
 
             const [authReady, setAuthReady] = useState(false);
             const [userId, setUserId] = useState(null);
@@ -452,19 +444,18 @@
 
             const handleCloseImage = useCallback(() => {
                 setEnlargedImage(null);
-                // Восстанавливаем прокрутку после закрытия модала
-                setTimeout(() => {
-                    window.scrollTo({
-                        top: scrollPosition.current,
-                        behavior: 'auto'
-                    });
-                }, 1);
+                restoreScrollPosition();
             }, []);
 
-            // === ДОБАВЛЕНО: Функции для открытия модальных окон с сохранением позиции ===
+            // === Функции для открытия/закрытия модальных окон с сохранением позиции ===
             const handleOpenAddPhotoModal = useCallback(() => {
                 saveScrollPosition();
                 setIsAddPhotoModalOpen(true);
+            }, []);
+
+            const handleCloseAddPhotoModal = useCallback(() => {
+                setIsAddPhotoModalOpen(false);
+                restoreScrollPosition();
             }, []);
 
             const handleOpenAddAlbumModal = useCallback(() => {
@@ -472,14 +463,42 @@
                 setIsAddAlbumModalOpen(true);
             }, []);
 
+            const handleCloseAddAlbumModal = useCallback(() => {
+                setIsAddAlbumModalOpen(false);
+                restoreScrollPosition();
+            }, []);
+
             const handleOpenAddDividerModal = useCallback(() => {
                 saveScrollPosition();
                 setIsAddDividerModalOpen(true);
             }, []);
 
+            const handleCloseAddDividerModal = useCallback(() => {
+                setIsAddDividerModalOpen(false);
+                restoreScrollPosition();
+            }, []);
+
             const handleOpenLoginModal = useCallback(() => {
                 saveScrollPosition();
                 setIsLoginModalOpen(true);
+            }, []);
+
+            const handleCloseLoginModal = useCallback(() => {
+                setIsLoginModalOpen(false);
+                restoreScrollPosition();
+            }, []);
+
+            const handleOpenRenameModal = useCallback((album) => {
+                if (!isAdmin) return;
+                saveScrollPosition();
+                setAlbumToRename(album);
+                setIsRenameModalOpen(true);
+            }, [isAdmin]);
+
+            const handleCloseRenameModal = useCallback(() => {
+                setIsRenameModalOpen(false);
+                setAlbumToRename(null);
+                restoreScrollPosition();
             }, []);
 
             // --- 1. Аутентификация и Настройка ---
@@ -536,21 +555,6 @@
                     setIsReorderMode(false);
                 }
             }, [isAdmin]);
-
-            // Функция для открытия модала переименования
-            const handleOpenRenameModal = useCallback((album) => {
-                if (!isAdmin) return;
-                saveScrollPosition();
-                setAlbumToRename(album);
-                setIsRenameModalOpen(true);
-            }, [isAdmin]);
-
-            // Функция для закрытия модала переименования
-            const handleCloseRenameModal = useCallback(() => {
-                saveScrollPosition();
-                setIsRenameModalOpen(false);
-                setAlbumToRename(null);
-            }, []);
 
             // --- ЛОГИКА АДМИНИСТРАТОРА (Login/Logout) ---
             const handleAdminLogin = async (email, password) => {
@@ -712,7 +716,6 @@
             // --- 3. CRUD-функции (Только для Администратора) ---
             
             const renameAlbum = async (albumId, newName) => {
-                saveScrollPosition();
                 if (!isAdmin) {
                     alertUser('Ошибка доступа', 'Вы должны быть Администратором для переименования альбомов.');
                     return false;
@@ -742,7 +745,6 @@
             };
             
             const updatePhotoCaption = async (albumId, photoTimestamp, newCaption) => {
-                saveScrollPosition();
                 if (!isAdmin) {
                     alertUser('Ошибка доступа', 'Вы должны быть Администратором для редактирования подписей.');
                     return;
@@ -786,7 +788,6 @@
             };
             
             const deletePhoto = async (albumId, itemToDelete) => {
-                saveScrollPosition();
                 if (!isAdmin) {
                     alertUser('Ошибка доступа', 'Вы должны быть Администратором для удаления элементов.');
                     return;
@@ -843,7 +844,6 @@
             }, [isReorderMode, isAdmin]);
 
             const handleDrop = useCallback(async (e) => {
-                saveScrollPosition();
                 if (!isAdmin) {
                     alertUser('Ошибка доступа', 'Вы должны быть Администратором для изменения порядка.');
                     dragItemUniqueId.current = null;
@@ -903,7 +903,6 @@
             }, [isReorderMode, isAdmin, selectedAlbum, db]);
 
             const addDivider = async (albumId, text) => {
-                saveScrollPosition();
                 if (!isAdmin) {
                     alertUser('Ошибка доступа', 'Вы должны быть Администратором для добавления разделителей.');
                     return;
@@ -936,7 +935,6 @@
             };
 
             const createNewAlbum = async (name) => {
-                saveScrollPosition();
                 if (!isAdmin) {
                     alertUser('Ошибка доступа', 'Вы должны быть Администратором для создания альбомов.');
                     return;
@@ -964,7 +962,6 @@
             };
 
             const addPhotoLink = async (albumId, url, aspectRatio = 1.0) => {
-                saveScrollPosition();
                 if (!isAdmin) {
                     alertUser('Ошибка доступа', 'Вы должны быть Администратором для добавления фото.');
                     return;
@@ -1137,7 +1134,7 @@
                 return (
                     <Modal
                         isOpen={isLoginModalOpen}
-                        onClose={() => setIsLoginModalOpen(false)}
+                        onClose={handleCloseLoginModal}
                         title="Вход Администратора"
                     >
                         <form onSubmit={handleSubmit} className="space-y-4">
@@ -1160,7 +1157,7 @@
                             <div className="flex justify-end mt-4 space-x-3">
                                 <button
                                     type="button"
-                                    onClick={() => setIsLoginModalOpen(false)}
+                                    onClick={handleCloseLoginModal}
                                     className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition"
                                 >
                                     Отмена
@@ -1188,7 +1185,7 @@
                 };
 
                 return (
-                    <Modal isOpen={isAddAlbumModalOpen} onClose={() => setIsAddAlbumModalOpen(false)} title="Создать новый альбом">
+                    <Modal isOpen={isAddAlbumModalOpen} onClose={handleCloseAddAlbumModal} title="Создать новый альбом">
                         <form onSubmit={handleSubmit}>
                             <input
                                 type="text"
@@ -1199,7 +1196,7 @@
                                 required
                             />
                             <div className="flex justify-end mt-4 space-x-3">
-                                <button type="button" onClick={() => setIsAddAlbumModalOpen(false)} className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition">
+                                <button type="button" onClick={handleCloseAddAlbumModal} className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition">
                                     Отмена
                                 </button>
                                 <button type="submit" className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 transition shadow-md">
@@ -1223,7 +1220,7 @@
                 };
 
                 return (
-                    <Modal isOpen={isAddDividerModalOpen} onClose={() => setIsAddDividerModalOpen(false)} title="Добавить текстовый разделитель">
+                    <Modal isOpen={isAddDividerModalOpen} onClose={handleCloseAddDividerModal} title="Добавить текстовый разделитель">
                         <form onSubmit={handleSubmit}>
                             <label className="block text-sm font-medium text-gray-700 mb-1">Текст главы/раздела</label>
                             <input
@@ -1235,7 +1232,7 @@
                                 required
                             />
                             <div className="flex justify-end mt-4 space-x-3">
-                                <button type="button" onClick={() => setIsAddDividerModalOpen(false)} className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition">
+                                <button type="button" onClick={handleCloseAddDividerModal} className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition">
                                     Отмена
                                 </button>
                                 <button type="submit" className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 transition shadow-md">
@@ -1304,7 +1301,7 @@
                 }, [previewImage]);
 
                 return (
-                    <Modal isOpen={isAddPhotoModalOpen} onClose={() => setIsAddPhotoModalOpen(false)} title="Добавить фото по ссылке">
+                    <Modal isOpen={isAddPhotoModalOpen} onClose={handleCloseAddPhotoModal} title="Добавить фото по ссылке">
                         <form onSubmit={handleSubmit}>
                             <div className="space-y-4">
                                 <div>
@@ -1359,7 +1356,7 @@
                                 </div>
                             </div>
                             <div className="flex justify-end mt-6 space-x-3">
-                                <button type="button" onClick={() => setIsAddPhotoModalOpen(false)} className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition">
+                                <button type="button" onClick={handleCloseAddPhotoModal} className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition">
                                     Отмена
                                 </button>
                                 <button 
