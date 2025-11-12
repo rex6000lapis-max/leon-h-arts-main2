@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Leon H-Arts: Галерея Фанфиков (Исправлено)</title>
+    <title>Leon H-Arts: Галерея Фанфиков )</title>
 <!-- ФАВИКОНЫ: Сгенерированы через Favicon.io -->
 <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
 <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
@@ -300,7 +300,6 @@
                     <div className="absolute top-4 right-4 z-[70] flex space-x-2 p-2">
                         {isAdmin && ( // ! Кнопка редактирования только для администратора
                             <button
-                                type="button" /* --- ИЗМЕНЕНИЕ --- */
                                 onClick={(e) => { e.stopPropagation(); setIsEditPanelOpen(prev => !prev); }}
                                 className={`p-2 text-white transition rounded-full shadow-lg ${
                                     isEditPanelOpen ? 'bg-indigo-600' : 'bg-black bg-opacity-50 hover:bg-opacity-70'
@@ -312,7 +311,6 @@
                             </button>
                         )}
                         <button 
-                            type="button" /* --- ИЗМЕНЕНИЕ --- */
                             onClick={handleClose} 
                             className="p-2 text-white hover:bg-opacity-70 transition rounded-full bg-black bg-opacity-50"
                             aria-label="Закрыть"
@@ -327,10 +325,7 @@
                         onClick={(e) => { e.stopPropagation(); onPrev(); }}
                         title="Предыдущее фото (Стрелка влево)"
                     >
-                        <button 
-                            type="button" /* --- ИЗМЕНЕНИЕ --- */
-                            className="nav-arrow opacity-0 group-hover:opacity-100 transition-opacity"
-                        >
+                        <button className="nav-arrow opacity-0 group-hover:opacity-100 transition-opacity">
                             <ChevronLeft size={40} className="w-10 h-10 md:w-12 md:h-12" />
                         </button>
                     </div>
@@ -339,10 +334,7 @@
                         onClick={(e) => { e.stopPropagation(); onNext(); }}
                         title="Следующее фото (Стрелка вправо)"
                     >
-                        <button 
-                            type="button" /* --- ИЗМЕНЕНИЕ --- */
-                            className="nav-arrow opacity-0 group-hover:opacity-100 transition-opacity"
-                        >
+                        <button className="nav-arrow opacity-0 group-hover:opacity-100 transition-opacity">
                             <ChevronRight size={40} className="w-10 h-10 md:w-12 md:h-12" />
                         </button>
                     </div>
@@ -397,7 +389,6 @@
                                         rows={3}
                                     />
                                 <button 
-                                    type="button" /* --- ИЗМЕНЕНИЕ --- */
                                     onClick={handleSave}
                                     disabled={isSaving}
                                     className="flex items-center px-4 py-3 bg-indigo-600 text-white font-medium rounded-lg hover:bg-indigo-700 transition disabled:bg-indigo-400 shadow-md"
@@ -420,16 +411,17 @@
 
         // Главный компонент приложения
         const App = () => {
-            // === ИСПРАВЛЕННАЯ СИСТЕМА СОХРАНЕНИЯ ПОЗИЦИИ ПРОКРУТКИ ===
+            // === ОБЪЕДИНЕННАЯ СИСТЕМА СОХРАНЕНИЯ ПОЗИЦИИ ПРОКРУТКИ ===
             const scrollPosition = useRef(0);
-            
-            // Сохраняем позицию. (Будет вызываться ПЕРЕД открытием модала)
+
+            // Эта функция вызывается ПЕРЕД ЛЮБЫМ ДЕЙСТВИЕМ, которое может
+            // вызвать обновление UI и сброс прокрутки (кроме открытия модала)
             const saveScrollPosition = () => {
                 scrollPosition.current = window.scrollY || document.documentElement.scrollTop;
-                // console.log('Scroll position saved:', scrollPosition.current);
+                console.log('Scroll position saved:', scrollPosition.current);
             };
 
-            // ИСПРАВЛЕНО: Удалены shouldRestoreScroll и restoreScrollPosition
+            // ИСПРАВЛЕНО: Удалены shouldRestoreScroll, restoreScrollPosition и глобальный useEffect
             // =========================================================
 
             // Используем '|| false' для authReady, чтобы убедиться, что состояние определено
@@ -466,7 +458,7 @@
             const dragItemUniqueId = useRef(null); 
             const dragOverItemUniqueId = useRef(null); 
 
-            // === ИСПРАВЛЕНИЕ ЛОГИКИ ПРОКРУТКИ ===
+            // === ОБЪЕДИНЕННАЯ ЛОГИКА ПРОКРУТКИ (ИЗ ФАЙЛА 2) ===
             // НОВАЯ ФУНКЦИЯ: Вызывается при клике на фото в галерее
             const handleOpenImage = useCallback((image) => {
                 saveScrollPosition(); // 1. Сохраняем текущую прокрутку
@@ -485,7 +477,7 @@
                         top: scrollPosition.current,
                         behavior: 'auto'
                     });
-                    // console.log('Restoring scroll (from handleCloseImage) to:', scrollPosition.current);
+                    console.log('Restoring scroll (from handleCloseImage) to:', scrollPosition.current);
                 }, 1); 
             }, []); // Зависимостей нет, ref-ы и setState - стабильны
             // ===================================
@@ -554,14 +546,14 @@
             // Функция для открытия модала переименования
             const handleOpenRenameModal = useCallback((album) => {
                 if (!isAdmin) return;
-                // ИСПРАВЛЕНО: saveScrollPosition() убран
+                saveScrollPosition(); // ИЗ ФАЙЛА 1: Сохраняем позицию
                 setAlbumToRename(album);
                 setIsRenameModalOpen(true);
             }, [isAdmin]);
 
             // Функция для закрытия модала переименования
             const handleCloseRenameModal = useCallback(() => {
-                // ИСПРАВЛЕНО: saveScrollPosition() убран
+                saveScrollPosition(); // ИЗ ФАЙЛА 1: Сохраняем позицию
                 setIsRenameModalOpen(false);
                 setAlbumToRename(null);
             }, []);
@@ -623,18 +615,18 @@
             // --------------------------------------------------
 
             // Управление режимами редактирования
-            // ** ИСПРАВЛЕНИЕ: УБРАН ВЫЗОВ saveScrollPosition() **
             const toggleDeleteMode = useCallback(() => {
                 if (!isAdmin) return; // ! Проверка Admin
+                saveScrollPosition(); // ИЗ ФАЙЛА 1: Сохраняем позицию
                 setIsDeleteMode(prev => !prev);
                 if (!isDeleteMode) { 
                     setIsReorderMode(false); // Отключаем переупорядочивание
                 }
             }, [isDeleteMode, isAdmin]);
 
-            // ** ИСПРАВЛЕНИЕ: УБРАН ВЫЗОВ saveScrollPosition() **
             const toggleReorderMode = useCallback(() => {
                 if (!isAdmin) return; // ! Проверка Admin
+                saveScrollPosition(); // ИЗ ФАЙЛА 1: Сохраняем позицию
                 setIsReorderMode(prev => !prev);
                 if (!isReorderMode) { 
                     setIsDeleteMode(false); // Отключаем удаление
@@ -642,8 +634,8 @@
             }, [isReorderMode, isAdmin]);
             // -----------------------------------------
 
-            // ** ИСПРАВЛЕНИЕ: УБРАН ВЫЗОВ saveScrollPosition() **
             const handleGoHome = useCallback(() => {
+                saveScrollPosition(); // ИЗ ФАЙЛА 1: Сохраняем позицию
                 setSelectedAlbum(null);
                 setCurrentView('home');
                 setIsDeleteMode(false); 
@@ -651,7 +643,7 @@
             }, []); 
 
             const handleOpenAlbum = useCallback((album) => {
-                saveScrollPosition(); // Сохраняем позицию на главной
+                saveScrollPosition(); // ИЗ ФАЙЛА 1: Сохраняем позицию
                 setSelectedAlbum(album);
                 setCurrentView('album');
                 setIsDeleteMode(false); 
@@ -740,8 +732,8 @@
             // --- 3. CRUD-функции (Только для Администратора) ---
             
             // **ФУНКЦИЯ ПЕРЕИМЕНОВАНИЯ АЛЬБОМА**
-            // ** ИСПРАВЛЕНИЕ: УБРАН ВЫЗОВ saveScrollPosition() **
             const renameAlbum = async (albumId, newName) => {
+                saveScrollPosition(); // ИЗ ФАЙЛА 1: Сохраняем позицию
                 if (!isAdmin) {
                     alertUser('Ошибка доступа', 'Вы должны быть Администратором для переименования альбомов.');
                     return false;
@@ -772,8 +764,8 @@
             };
             
             // **ОБНОВЛЕНИЕ ПОДПИСИ ФОТОГРАФИИ**
-            // ** ИСПРАВЛЕНИЕ: УБРАН ВЫЗОВ saveScrollPosition() **
             const updatePhotoCaption = async (albumId, photoTimestamp, newCaption) => {
+                saveScrollPosition(); // ИЗ ФАЙЛА 1: Сохраняем позицию
                 if (!isAdmin) { // ! Проверка Admin
                     alertUser('Ошибка доступа', 'Вы должны быть Администратором для редактирования подписей.');
                     return;
@@ -818,8 +810,8 @@
             };
             
             // **УДАЛЕНИЕ ЭЛЕМЕНТА (ФОТО ИЛИ РАЗДЕЛИТЕЛЬ)**
-            // ** ИСПРАВЛЕНИЕ: УБРАН ВЫЗОВ saveScrollPosition() **
             const deletePhoto = async (albumId, itemToDelete) => {
+                saveScrollPosition(); // ИЗ ФАЙЛА 1: Сохраняем позицию
                 if (!isAdmin) { // ! Проверка Admin
                     alertUser('Ошибка доступа', 'Вы должны быть Администратором для удаления элементов.');
                     return;
@@ -845,8 +837,7 @@
                         
                         console.log(`Элемент (тип: ${itemToDelete.type || 'photo'}) ${itemToDelete.timestamp} удален.`);
                         
-                        // Закрываем модал, если удаленный элемент был увеличен
-                        // ИСПРАВЛЕНО: используем handleCloseImage
+                        // ИСПРАВЛЕНО: Закрываем модал через handleCloseImage, если удаленный элемент был увеличен
                         if (enlargedImage && enlargedImage.timestamp === itemToDelete.timestamp) {
                             handleCloseImage();
                         }
@@ -860,9 +851,9 @@
 
 
             // **ИЗМЕНЕНИЕ ПОРЯДКА ФОТОГРАФИЙ И РАЗДЕЛИТЕЛЕЙ (DRAG AND DROP)**
-            // ** ИСПРАВЛЕНИЕ: УБРАН ВЫЗОВ saveScrollPosition() **
             const handleDragStart = useCallback((e, uniqueId) => {
                 if (!isReorderMode || !isAdmin) return; // ! Проверка Admin
+                saveScrollPosition(); // ИЗ ФАЙЛА 1: Сохраняем позицию
                 dragItemUniqueId.current = uniqueId;
                 e.dataTransfer.effectAllowed = "move";
                 // Установка Drag Image для лучшего UX
@@ -882,8 +873,8 @@
                 e.preventDefault();
             }, [isReorderMode, isAdmin]);
 
-            // ** ИСПРАВЛЕНИЕ: УБРАН ВЫЗОВ saveScrollPosition() **
             const handleDrop = useCallback(async (e) => {
+                saveScrollPosition(); // ИЗ ФАЙЛА 1: Сохраняем позицию
                 if (!isAdmin) {
                     alertUser('Ошибка доступа', 'Вы должны быть Администратором для изменения порядка.');
                     dragItemUniqueId.current = null;
@@ -945,8 +936,8 @@
             // ------------------------------------------------------------------
 
             // **СОЗДАНИЕ РАЗДЕЛИТЕЛЯ**
-            // ** ИСПРАВЛЕНИЕ: УБРАН ВЫЗОВ saveScrollPosition() **
             const addDivider = async (albumId, text) => {
+                saveScrollPosition(); // ИЗ ФАЙЛА 1: Сохраняем позицию
                 if (!isAdmin) { // ! Проверка Admin
                     alertUser('Ошибка доступа', 'Вы должны быть Администратором для добавления разделителей.');
                     return;
@@ -981,8 +972,8 @@
 
 
             // Создание нового альбома
-            // ** ИСПРАВЛЕНИЕ: УБРАН ВЫЗОВ saveScrollPosition() **
             const createNewAlbum = async (name) => {
+                saveScrollPosition(); // ИЗ ФАЙЛА 1: Сохраняем позицию
                 if (!isAdmin) { // ! Проверка Admin
                     alertUser('Ошибка доступа', 'Вы должны быть Администратором для создания альбомов.');
                     return;
@@ -1010,8 +1001,8 @@
             };
 
             // Добавление ссылки на фото в альбом
-            // ** ИСПРАВЛЕНИЕ: УБРАН ВЫЗОВ saveScrollPosition() **
             const addPhotoLink = async (albumId, url, aspectRatio = 1.0) => {
+                saveScrollPosition(); // ИЗ ФАЙЛА 1: Сохраняем позицию
                 if (!isAdmin) { // ! Проверка Admin
                     alertUser('Ошибка доступа', 'Вы должны быть Администратором для добавления фото.');
                     return;
@@ -1082,7 +1073,6 @@
                         {/* Кнопка переименования (Только для Admin) */}
                         {isAdmin && (
                             <button
-                                type="button" /* --- ИЗМЕНЕНИЕ --- */
                                 onClick={(e) => { 
                                     e.stopPropagation(); 
                                     handleOpenRenameModal(album);
@@ -1122,11 +1112,7 @@
                         >
                             <div className="flex justify-between items-center border-b pb-3 mb-4">
                                 <h2 className="text-xl font-bold text-gray-800">{title}</h2>
-                                <button 
-                                    type="button" /* --- ИЗМЕНЕНИЕ --- */
-                                    onClick={onClose} 
-                                    className="text-gray-400 hover:text-gray-600"
-                                >
+                                <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
                                     <X size={24} />
                                 </button>
                             </div>
@@ -1453,8 +1439,7 @@
             };
             
             // Вид: Сетка фото в альбоме (Justified Gallery)
-            // ИСПРАВЛЕНО: принимает onOpenImage как prop
-            const AlbumPhotoView = ({ onOpenImage }) => {
+            const AlbumPhotoView = () => {
                 if (!selectedAlbum) return <HomeView />;
 
                 const albumRef = useRef(null);
@@ -1608,7 +1593,6 @@
                                              {/* КНОПКА УДАЛЕНИЯ РАЗДЕЛИТЕЛЯ (Только для Admin) */}
                                              {isDeleteMode && isAdmin && (
                                                 <button
-                                                    type="button" /* --- ИЗМЕНЕНИЕ --- */
                                                     onClick={(e) => { 
                                                         e.stopPropagation(); 
                                                         deletePhoto(selectedAlbum.id, divider);
@@ -1637,8 +1621,8 @@
                                             return (
                                                 <div 
                                                     key={uniqueId} 
-                                                    // ИСПРАВЛЕНО: используем onOpenImage
-                                                    onClick={!isDeleteMode && !isReorderMode ? () => onOpenImage(image) : undefined}
+                                                    // ИСПРАВЛЕНО: используем handleOpenImage из App
+                                                    onClick={!isDeleteMode && !isReorderMode ? () => handleOpenImage(image) : undefined}
                                                     
                                                     // Атрибуты Drag and Drop (Только для Admin)
                                                     draggable={isReorderMode && isAdmin}
@@ -1671,7 +1655,6 @@
                                                     {/* КНОПКА УДАЛЕНИЯ (Только для Admin) */}
                                                     {isDeleteMode && isAdmin && (
                                                         <button
-                                                            type="button" /* --- ИЗМЕНЕНИЕ --- */
                                                             onClick={(e) => { 
                                                                 e.stopPropagation();
                                                                 deletePhoto(selectedAlbum.id, image);
@@ -1793,7 +1776,6 @@
                                 {currentView === 'album' && selectedAlbum && (
                                     <div className="ml-4 pl-4 border-l border-gray-200 flex items-center flex-wrap">
                                         <button 
-                                            type="button" /* --- ИЗМЕНЕНИЕ --- */
                                             onClick={handleGoHome} 
                                             className="text-indigo-600 hover:text-indigo-800 transition text-sm font-medium"
                                             aria-label="Вернуться к альбомам"
@@ -1814,7 +1796,6 @@
                                 {isAdmin && currentView === 'album' && selectedAlbum && (
                                     <>
                                         <button
-                                            type="button" /* --- ИЗМЕНЕНИЕ --- */
                                             onClick={toggleDeleteMode}
                                             className={`p-2 rounded-full transition shadow-md ${isDeleteMode 
                                                 ? 'bg-red-500 text-white hover:bg-red-600' 
@@ -1826,7 +1807,6 @@
                                         </button>
 
                                         <button
-                                            type="button" /* --- ИЗМЕНЕНИЕ --- */
                                             onClick={toggleReorderMode}
                                             className={`p-2 rounded-full transition shadow-md ${isReorderMode 
                                                 ? 'bg-indigo-500 text-white hover:bg-indigo-600' 
@@ -1838,7 +1818,6 @@
                                         </button>
                                         
                                         <button
-                                            type="button" /* --- ИЗМЕНЕНИЕ --- */
                                             onClick={() => setIsAddDividerModalOpen(true)}
                                             className="p-2 border border-gray-300 text-sm font-medium rounded-full text-gray-700 bg-white hover:bg-gray-100 transition shadow-sm"
                                             title="Добавить разделитель (Глава)"
@@ -1854,7 +1833,6 @@
                                 {isAdmin && (
                                     <>
                                         <button
-                                            type="button" /* --- ИЗМЕНЕНИЕ --- */
                                             onClick={() => setIsAddPhotoModalOpen(true)}
                                             className="flex items-center p-2 border border-gray-300 text-sm font-medium rounded-full shadow-sm text-gray-700 bg-white hover:bg-gray-100 transition"
                                             disabled={isDeleteMode || isReorderMode}
@@ -1863,7 +1841,6 @@
                                             <ImageIcon className="h-5 w-5" />
                                         </button>
                                         <button
-                                            type="button" /* --- ИЗМЕНЕНИЕ --- */
                                             onClick={() => setIsAddAlbumModalOpen(true)}
                                             className="flex items-center p-2 border border-gray-300 text-sm font-medium rounded-full text-gray-700 bg-white hover:bg-gray-100 transition shadow-sm"
                                             title="Создать альбом"
@@ -1876,7 +1853,6 @@
                                 {/* --- КНОПКА АДМИНА (Login/Logout) --- */}
                                 {!isAdmin && (
                                     <button
-                                        type="button" /* --- ИЗМЕНЕНИЕ --- */
                                         onClick={() => setIsLoginModalOpen(true)}
                                         className="flex items-center px-4 py-2 border border-indigo-300 text-sm font-medium rounded-full text-indigo-700 bg-indigo-100 hover:bg-indigo-200 transition shadow-sm"
                                         title="Войти как Администратор"
@@ -1891,8 +1867,9 @@
 
                     {/* Main Content */}
                     <main className="pb-12">
-                        {/* ИСПРАВЛЕНО: передаем onOpenImage в AlbumPhotoView */}
-                        {currentView === 'home' ? <HomeView /> : <AlbumPhotoView onOpenImage={handleOpenImage} />}
+                        {/* ИСПРАВЛЕНО: AlbumPhotoView теперь не принимает props, 
+                            т.к. он внутри App и имеет доступ к handleOpenImage */}
+                        {currentView === 'home' ? <HomeView /> : <AlbumPhotoView />}
                     </main>
 
                     {/* Modals */}
@@ -1903,16 +1880,15 @@
                     <AddDividerModal /> 
                     
                     {/* Модал: Увеличенное изображение с редактированием подписи */}
+                    {/* ИСПРАВЛЕНО: onClose теперь handleCloseImage, onSaveScrollPosition удален */}
                     <ImageModal 
                         image={enlargedImage} 
-                        // ИСПРАВЛЕНО: используем handleCloseImage
                         onClose={handleCloseImage} 
                         onSaveCaption={updatePhotoCaption}
                         albumId={selectedAlbum?.id} 
                         onNext={handleNextImage}
                         onPrev={handlePrevImage}
                         isAdmin={isAdmin} 
-                        // ИСПРАВЛЕНО: onSaveScrollPosition убран
                     />
 
                 </div>
