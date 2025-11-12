@@ -462,29 +462,13 @@
             
             // === ИСПРАВЛЕНИЕ ЛОГИКИ ПРОКРУТКИ ===
             // Мы используем ref, чтобы отслеживать *предыдущее* состояние enlargedImage
-            const enlargedImageRef = useRef(enlargedImage);
+            // const enlargedImageRef = useRef(enlargedImage); // УДАЛЕНО
 
+            /*
             useLayoutEffect(() => {
-                // useLayoutEffect срабатывает синхронно после рендера, до того как браузер отрисует кадр.
-                // Идеально для манипуляций с прокруткой.
-
-                // Проверяем, было ли в *предыдущем* рендере изображение (enlargedImageRef.current != null),
-                // а в *текущем* рендере его нет (enlargedImage == null).
-                // Это означает, что модальное окно ТОЛЬКО ЧТО закрылось.
-                if (enlargedImageRef.current && !enlargedImage) {
-                    
-                    // Восстанавливаем позицию прокрутки
-                    window.scrollTo({
-                        top: scrollPosition.current,
-                        behavior: 'auto' // 'auto' работает мгновенно, без анимации
-                    });
-                    // console.log('Restoring scroll to:', scrollPosition.current);
-                }
-                
-                // Обновляем ref *после* проверки, чтобы он был готов к следующему рендеру.
-                enlargedImageRef.current = enlargedImage;
-
-            }, [enlargedImage]); // Этот эффект будет запускаться ТОЛЬКО при изменении enlargedImage
+                // ... (ВЕСЬ БЛОК useLayoutEffect УДАЛЕН)
+            }, [enlargedImage]);
+            */
 
             // НОВАЯ ФУНКЦИЯ: Вызывается при клике на фото в галерее
             const handleOpenImage = useCallback((image) => {
@@ -495,7 +479,18 @@
             // НОВАЯ ФУНКЦИЯ: Вызывается при закрытии модала
             const handleCloseImage = useCallback(() => {
                 setEnlargedImage(null); // Просто закрываем модал
-            }, []);
+
+                // ИСПРАВЛЕНИЕ: Восстанавливаем прокрутку здесь,
+                // но с небольшой задержкой (1мс), чтобы React успел
+                // убрать модал и страница "появилась".
+                setTimeout(() => {
+                    window.scrollTo({
+                        top: scrollPosition.current,
+                        behavior: 'auto'
+                    });
+                    // console.log('Restoring scroll (from handleCloseImage) to:', scrollPosition.current);
+                }, 1); 
+            }, []); // Зависимостей нет, ref-ы и setState - стабильны
             // ===================================
 
             // --- 1. Аутентификация и Настройка ---
