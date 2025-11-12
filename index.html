@@ -253,6 +253,11 @@
             const [isSaving, setIsSaving] = useState(false);
             const [isEditPanelOpen, setIsEditPanelOpen] = useState(false); 
             
+            // СОХРАНЯЕМ ПОЗИЦИЮ ПРИ ОТКРЫТИИ МОДАЛЬНОГО ОКНА
+            useEffect(() => {
+                onSaveScrollPosition();
+            }, []);
+
             useEffect(() => {
                 setCaption(image.caption || '');
             }, [image.caption]);
@@ -413,6 +418,7 @@
             // === УЛУЧШЕННАЯ СИСТЕМА СОХРАНЕНИЯ ПОЗИЦИИ ПРОКРУТКИ ===
             const scrollPosition = useRef(0);
             const shouldRestoreScroll = useRef(false);
+            const scrollRestoreTimeout = useRef(null);
 
             const saveScrollPosition = () => {
                 scrollPosition.current = window.scrollY || document.documentElement.scrollTop;
@@ -423,12 +429,27 @@
             const restoreScrollPosition = () => {
                 if (shouldRestoreScroll.current && scrollPosition.current > 0) {
                     console.log('Restoring scroll to:', scrollPosition.current);
-                    setTimeout(() => {
+                    
+                    // Очищаем предыдущий таймаут
+                    if (scrollRestoreTimeout.current) {
+                        clearTimeout(scrollRestoreTimeout.current);
+                    }
+                    
+                    // Пробуем несколько раз с разными задержками
+                    scrollRestoreTimeout.current = setTimeout(() => {
                         window.scrollTo({
                             top: scrollPosition.current,
                             behavior: 'auto'
                         });
-                        shouldRestoreScroll.current = false;
+                        
+                        // Второй раз для надежности
+                        setTimeout(() => {
+                            window.scrollTo({
+                                top: scrollPosition.current,
+                                behavior: 'auto'
+                            });
+                            shouldRestoreScroll.current = false;
+                        }, 50);
                     }, 100);
                 }
             };
@@ -639,6 +660,16 @@
                 setIsReorderMode(false);
             }, []); 
 
+            // ОБНОВЛЕННАЯ ФУНКЦИЯ ДЛЯ ЗАКРЫТИЯ МОДАЛЬНОГО ОКНА ИЗОБРАЖЕНИЯ
+            const handleCloseImageModal = useCallback(() => {
+                saveScrollPosition();
+                setEnlargedImage(null);
+                // Дополнительное восстановление через небольшой таймаут
+                setTimeout(() => {
+                    restoreScrollPosition();
+                }, 50);
+            }, []);
+
             const alertUser = (title, message) => {
                 // Простая реализация модального окна/сообщения
                 console.warn(`[ВНИМАНИЕ ${title}]: ${message}`);
@@ -828,8 +859,7 @@
                         
                         // Закрываем модал, если удаленный элемент был увеличен
                         if (enlargedImage && enlargedImage.timestamp === itemToDelete.timestamp) {
-                            saveScrollPosition();
-                            setEnlargedImage(null);
+                            handleCloseImageModal();
                         }
                     }
 
@@ -990,7 +1020,7 @@
                 }
             };
 
-            // Добавление ссылки на фото в альбом
+            // ОБНОВЛЕННАЯ ФУНКЦИЯ ДОБАВЛЕНИЯ ФОТО
             const addPhotoLink = async (albumId, url, aspectRatio = 1.0) => {
                 saveScrollPosition();
                 if (!isAdmin) { // ! Проверка Admin
@@ -1021,6 +1051,11 @@
 
                     setIsAddPhotoModalOpen(false);
                     console.log(`Ссылка добавлена в альбом ${albumId}.`);
+                    
+                    // ДОПОЛНИТЕЛЬНОЕ ВОССТАНОВЛЕНИЕ ПОЗИЦИИ ПОСЛЕ ДОБАВЛЕНИЯ ФОТО
+                    setTimeout(() => {
+                        restoreScrollPosition();
+                    }, 100);
 
                 } catch (e) {
                     console.error("Ошибка при добавлении ссылки:", e);
@@ -1092,6 +1127,13 @@
             );
 
             const Modal = ({ isOpen, onClose, title, children }) => {
+                // СОХРАНЯЕМ ПОЗИЦИЮ ПРИ ОТКРЫТИИ ЛЮБОГО МОДАЛЬНОГО ОКНА
+                useEffect(() => {
+                    if (isOpen) {
+                        saveScrollPosition();
+                    }
+                }, [isOpen]);
+
                 if (!isOpen) return null;
                 
                 return (
@@ -1611,7 +1653,10 @@
                                             return (
                                                 <div 
                                                     key={uniqueId} 
-                                                    onClick={!isDeleteMode && !isReorderMode ? () => setEnlargedImage(image) : undefined}
+                                                    onClick={!isDeleteMode && !isReorderMode ? () => {
+                                                        saveScrollPosition();
+                                                        setEnlargedImage(image);
+                                                    } : undefined}
                                                     
                                                     // Атрибуты Drag and Drop (Только для Admin)
                                                     draggable={isReorderMode && isAdmin}
@@ -1869,7 +1914,7 @@
                     {/* Модал: Увеличенное изображение с редактированием подписи */}
                     <ImageModal 
                         image={enlargedImage} 
-                        onClose={() => setEnlargedImage(null)} 
+                        onClose={handleCloseImageModal}
                         onSaveCaption={updatePhotoCaption}
                         albumId={selectedAlbum?.id} 
                         onNext={handleNextImage}
