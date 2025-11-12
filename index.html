@@ -501,6 +501,33 @@
                 restoreScrollPosition();
             }, []);
 
+            // === Функции для управления режимами с сохранением позиции ===
+            const toggleDeleteMode = useCallback(() => {
+                if (!isAdmin) return;
+                saveScrollPosition();
+                setIsDeleteMode(prev => !prev);
+                if (!isDeleteMode) {
+                    setIsReorderMode(false);
+                }
+                // Восстанавливаем позицию после изменения состояния
+                setTimeout(() => {
+                    restoreScrollPosition();
+                }, 0);
+            }, [isDeleteMode, isAdmin]);
+
+            const toggleReorderMode = useCallback(() => {
+                if (!isAdmin) return;
+                saveScrollPosition();
+                setIsReorderMode(prev => !prev);
+                if (!isReorderMode) {
+                    setIsDeleteMode(false);
+                }
+                // Восстанавливаем позицию после изменения состояния
+                setTimeout(() => {
+                    restoreScrollPosition();
+                }, 0);
+            }, [isReorderMode, isAdmin]);
+
             // --- 1. Аутентификация и Настройка ---
             useEffect(() => {
                 if (error && error.isCritical) {
@@ -608,31 +635,13 @@
             const handleNextImage = useCallback(() => handleNavigation('next'), [handleNavigation]);
             const handlePrevImage = useCallback(() => handleNavigation('prev'), [handleNavigation]);
 
-            // Управление режимами редактирования
-            const toggleDeleteMode = useCallback(() => {
-                if (!isAdmin) return;
-                saveScrollPosition();
-                setIsDeleteMode(prev => !prev);
-                if (!isDeleteMode) {
-                    setIsReorderMode(false);
-                }
-            }, [isDeleteMode, isAdmin]);
-
-            const toggleReorderMode = useCallback(() => {
-                if (!isAdmin) return;
-                saveScrollPosition();
-                setIsReorderMode(prev => !prev);
-                if (!isReorderMode) {
-                    setIsDeleteMode(false);
-                }
-            }, [isReorderMode, isAdmin]);
-
             const handleGoHome = useCallback(() => {
                 saveScrollPosition();
                 setSelectedAlbum(null);
                 setCurrentView('home');
                 setIsDeleteMode(false);
                 setIsReorderMode(false);
+                restoreScrollPosition();
             }, []);
 
             const handleOpenAlbum = useCallback((album) => {
@@ -641,6 +650,7 @@
                 setCurrentView('album');
                 setIsDeleteMode(false);
                 setIsReorderMode(false);
+                restoreScrollPosition();
             }, []);
 
             const alertUser = (title, message) => {
@@ -900,6 +910,10 @@
                 
                 dragItemUniqueId.current = null;
                 dragOverItemUniqueId.current = null;
+                // Восстанавливаем позицию после перетаскивания
+                setTimeout(() => {
+                    restoreScrollPosition();
+                }, 0);
             }, [isReorderMode, isAdmin, selectedAlbum, db]);
 
             const addDivider = async (albumId, text) => {
