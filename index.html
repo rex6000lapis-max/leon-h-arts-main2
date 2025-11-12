@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Leon H-Arts: Галерея Фанфиков</title>
+    <title>Leon H-Arts: Галерея Фанфиков (Исправлено)</title>
 <!-- ФАВИКОНЫ: Сгенерированы через Favicon.io -->
 <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
 <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
@@ -246,7 +246,8 @@
 
 
         // --- КОМПОНЕНТ: Модальное окно для увеличенного изображения ---
-        const ImageModal = ({ image, onClose, onSaveCaption, albumId, onNext, onPrev, isAdmin, onSaveScrollPosition }) => {
+        // ИСПРАВЛЕНО: убран onSaveScrollPosition из props
+        const ImageModal = ({ image, onClose, onSaveCaption, albumId, onNext, onPrev, isAdmin }) => {
             if (!image || image.type === 'divider') return null;
 
             const [caption, setCaption] = useState(image.caption || '');
@@ -260,7 +261,7 @@
             useEffect(() => {
                 const handleKeyDown = (e) => {
                     if (e.key === 'Escape') {
-                        onSaveScrollPosition();
+                        // ИСПРАВЛЕНО: onSaveScrollPosition() убран
                         onClose();
                     } else if (e.key === 'ArrowRight') {
                         onNext();
@@ -272,7 +273,7 @@
                 return () => {
                     document.removeEventListener('keydown', handleKeyDown);
                 };
-            }, [onClose, onNext, onPrev, onSaveScrollPosition]);
+            }, [onClose, onNext, onPrev]); // ИСПРАВЛЕНО: onSaveScrollPosition убран из зависимостей
 
 
             const handleSave = async () => {
@@ -286,7 +287,7 @@
             };
 
             const handleClose = () => {
-                onSaveScrollPosition();
+                // ИСПРАВЛЕНО: onSaveScrollPosition() убран
                 onClose();
             };
 
@@ -410,33 +411,19 @@
 
         // Главный компонент приложения
         const App = () => {
-            // === УЛУЧШЕННАЯ СИСТЕМА СОХРАНЕНИЯ ПОЗИЦИИ ПРОКРУТКИ ===
+            
+            // === ИСПРАВЛЕННАЯ СИСТЕМА СОХРАНЕНИЯ ПОЗИЦИИ ПРОКРУТКИ ===
             const scrollPosition = useRef(0);
-            const shouldRestoreScroll = useRef(false);
-
+            
+            // Сохраняем позицию. (Будет вызываться ПЕРЕД открытием модала)
             const saveScrollPosition = () => {
                 scrollPosition.current = window.scrollY || document.documentElement.scrollTop;
-                shouldRestoreScroll.current = true;
-                console.log('Scroll position saved:', scrollPosition.current);
+                // console.log('Scroll position saved:', scrollPosition.current);
             };
 
-            const restoreScrollPosition = () => {
-                if (shouldRestoreScroll.current && scrollPosition.current > 0) {
-                    console.log('Restoring scroll to:', scrollPosition.current);
-                    setTimeout(() => {
-                        window.scrollTo({
-                            top: scrollPosition.current,
-                            behavior: 'auto'
-                        });
-                        shouldRestoreScroll.current = false;
-                    }, 100);
-                }
-            };
-
-            // Восстанавливаем позицию после любых изменений состояния
-            useEffect(() => {
-                restoreScrollPosition();
-            });
+            // ИСПРАВЛЕНО: Удалены shouldRestoreScroll и restoreScrollPosition
+            // Вместо них будет использован useLayoutEffect ниже.
+            // =========================================================
 
             // Используем '|| false' для authReady, чтобы убедиться, что состояние определено
             const [authReady, setAuthReady] = useState(false);
@@ -471,6 +458,45 @@
             // Состояния для Drag and Drop
             const dragItemUniqueId = useRef(null); 
             const dragOverItemUniqueId = useRef(null); 
+
+            
+            // === ИСПРАВЛЕНИЕ ЛОГИКИ ПРОКРУТКИ ===
+            // Мы используем ref, чтобы отслеживать *предыдущее* состояние enlargedImage
+            const enlargedImageRef = useRef(enlargedImage);
+
+            useLayoutEffect(() => {
+                // useLayoutEffect срабатывает синхронно после рендера, до того как браузер отрисует кадр.
+                // Идеально для манипуляций с прокруткой.
+
+                // Проверяем, было ли в *предыдущем* рендере изображение (enlargedImageRef.current != null),
+                // а в *текущем* рендере его нет (enlargedImage == null).
+                // Это означает, что модальное окно ТОЛЬКО ЧТО закрылось.
+                if (enlargedImageRef.current && !enlargedImage) {
+                    
+                    // Восстанавливаем позицию прокрутки
+                    window.scrollTo({
+                        top: scrollPosition.current,
+                        behavior: 'auto' // 'auto' работает мгновенно, без анимации
+                    });
+                    // console.log('Restoring scroll to:', scrollPosition.current);
+                }
+                
+                // Обновляем ref *после* проверки, чтобы он был готов к следующему рендеру.
+                enlargedImageRef.current = enlargedImage;
+
+            }, [enlargedImage]); // Этот эффект будет запускаться ТОЛЬКО при изменении enlargedImage
+
+            // НОВАЯ ФУНКЦИЯ: Вызывается при клике на фото в галерее
+            const handleOpenImage = useCallback((image) => {
+                saveScrollPosition(); // 1. Сохраняем текущую прокрутку
+                setEnlargedImage(image); // 2. Открываем модал
+            }, []); // Зависимостей нет, т.к. saveScrollPosition и setEnlargedImage стабильны
+
+            // НОВАЯ ФУНКЦИЯ: Вызывается при закрытии модала
+            const handleCloseImage = useCallback(() => {
+                setEnlargedImage(null); // Просто закрываем модал
+            }, []);
+            // ===================================
 
             // --- 1. Аутентификация и Настройка ---
             useEffect(() => {
@@ -535,14 +561,14 @@
             // Функция для открытия модала переименования
             const handleOpenRenameModal = useCallback((album) => {
                 if (!isAdmin) return;
-                saveScrollPosition();
+                saveScrollPosition(); // Используем нашу функцию сохранения
                 setAlbumToRename(album);
                 setIsRenameModalOpen(true);
             }, [isAdmin]);
 
             // Функция для закрытия модала переименования
             const handleCloseRenameModal = useCallback(() => {
-                saveScrollPosition();
+                // saveScrollPosition(); // Здесь сохранять не нужно, т.к. модал просто закрывается
                 setIsRenameModalOpen(false);
                 setAlbumToRename(null);
             }, []);
@@ -606,7 +632,7 @@
             // Управление режимами редактирования
             const toggleDeleteMode = useCallback(() => {
                 if (!isAdmin) return; // ! Проверка Admin
-                saveScrollPosition();
+                // saveScrollPosition(); // Не нужно, т.к. не открываем модал
                 setIsDeleteMode(prev => !prev);
                 if (!isDeleteMode) { 
                     setIsReorderMode(false); // Отключаем переупорядочивание
@@ -615,7 +641,7 @@
 
             const toggleReorderMode = useCallback(() => {
                 if (!isAdmin) return; // ! Проверка Admin
-                saveScrollPosition();
+                // saveScrollPosition(); // Не нужно
                 setIsReorderMode(prev => !prev);
                 if (!isReorderMode) { 
                     setIsDeleteMode(false); // Отключаем удаление
@@ -624,7 +650,7 @@
             // -----------------------------------------
 
             const handleGoHome = useCallback(() => {
-                saveScrollPosition();
+                // saveScrollPosition(); // Не нужно, т.к. уходим со страницы
                 setSelectedAlbum(null);
                 setCurrentView('home');
                 setIsDeleteMode(false); 
@@ -632,7 +658,7 @@
             }, []); 
 
             const handleOpenAlbum = useCallback((album) => {
-                saveScrollPosition();
+                saveScrollPosition(); // Сохраняем позицию на главной
                 setSelectedAlbum(album);
                 setCurrentView('album');
                 setIsDeleteMode(false); 
@@ -722,7 +748,7 @@
             
             // **ФУНКЦИЯ ПЕРЕИМЕНОВАНИЯ АЛЬБОМА**
             const renameAlbum = async (albumId, newName) => {
-                saveScrollPosition();
+                // saveScrollPosition(); // Не нужно
                 if (!isAdmin) {
                     alertUser('Ошибка доступа', 'Вы должны быть Администратором для переименования альбомов.');
                     return false;
@@ -754,7 +780,7 @@
             
             // **ОБНОВЛЕНИЕ ПОДПИСИ ФОТОГРАФИИ**
             const updatePhotoCaption = async (albumId, photoTimestamp, newCaption) => {
-                saveScrollPosition();
+                // saveScrollPosition(); // Не нужно, модал уже открыт
                 if (!isAdmin) { // ! Проверка Admin
                     alertUser('Ошибка доступа', 'Вы должны быть Администратором для редактирования подписей.');
                     return;
@@ -800,7 +826,7 @@
             
             // **УДАЛЕНИЕ ЭЛЕМЕНТА (ФОТО ИЛИ РАЗДЕЛИТЕЛЬ)**
             const deletePhoto = async (albumId, itemToDelete) => {
-                saveScrollPosition();
+                // saveScrollPosition(); // Не нужно
                 if (!isAdmin) { // ! Проверка Admin
                     alertUser('Ошибка доступа', 'Вы должны быть Администратором для удаления элементов.');
                     return;
@@ -827,9 +853,9 @@
                         console.log(`Элемент (тип: ${itemToDelete.type || 'photo'}) ${itemToDelete.timestamp} удален.`);
                         
                         // Закрываем модал, если удаленный элемент был увеличен
+                        // ИСПРАВЛЕНО: используем handleCloseImage
                         if (enlargedImage && enlargedImage.timestamp === itemToDelete.timestamp) {
-                            saveScrollPosition();
-                            setEnlargedImage(null);
+                            handleCloseImage();
                         }
                     }
 
@@ -843,7 +869,7 @@
             // **ИЗМЕНЕНИЕ ПОРЯДКА ФОТОГРАФИЙ И РАЗДЕЛИТЕЛЕЙ (DRAG AND DROP)**
             const handleDragStart = useCallback((e, uniqueId) => {
                 if (!isReorderMode || !isAdmin) return; // ! Проверка Admin
-                saveScrollPosition();
+                // saveScrollPosition(); // Не нужно
                 dragItemUniqueId.current = uniqueId;
                 e.dataTransfer.effectAllowed = "move";
                 // Установка Drag Image для лучшего UX
@@ -864,7 +890,7 @@
             }, [isReorderMode, isAdmin]);
 
             const handleDrop = useCallback(async (e) => {
-                saveScrollPosition();
+                // saveScrollPosition(); // Не нужно
                 if (!isAdmin) {
                     alertUser('Ошибка доступа', 'Вы должны быть Администратором для изменения порядка.');
                     dragItemUniqueId.current = null;
@@ -927,7 +953,7 @@
 
             // **СОЗДАНИЕ РАЗДЕЛИТЕЛЯ**
             const addDivider = async (albumId, text) => {
-                saveScrollPosition();
+                // saveScrollPosition(); // Не нужно
                 if (!isAdmin) { // ! Проверка Admin
                     alertUser('Ошибка доступа', 'Вы должны быть Администратором для добавления разделителей.');
                     return;
@@ -963,7 +989,7 @@
 
             // Создание нового альбома
             const createNewAlbum = async (name) => {
-                saveScrollPosition();
+                // saveScrollPosition(); // Не нужно
                 if (!isAdmin) { // ! Проверка Admin
                     alertUser('Ошибка доступа', 'Вы должны быть Администратором для создания альбомов.');
                     return;
@@ -992,7 +1018,7 @@
 
             // Добавление ссылки на фото в альбом
             const addPhotoLink = async (albumId, url, aspectRatio = 1.0) => {
-                saveScrollPosition();
+                // saveScrollPosition(); // Не нужно
                 if (!isAdmin) { // ! Проверка Admin
                     alertUser('Ошибка доступа', 'Вы должны быть Администратором для добавления фото.');
                     return;
@@ -1429,7 +1455,8 @@
             };
             
             // Вид: Сетка фото в альбоме (Justified Gallery)
-            const AlbumPhotoView = () => {
+            // ИСПРАВЛЕНО: принимает onOpenImage как prop
+            const AlbumPhotoView = ({ onOpenImage }) => {
                 if (!selectedAlbum) return <HomeView />;
 
                 const albumRef = useRef(null);
@@ -1611,7 +1638,8 @@
                                             return (
                                                 <div 
                                                     key={uniqueId} 
-                                                    onClick={!isDeleteMode && !isReorderMode ? () => setEnlargedImage(image) : undefined}
+                                                    // ИСПРАВЛЕНО: используем onOpenImage
+                                                    onClick={!isDeleteMode && !isReorderMode ? () => onOpenImage(image) : undefined}
                                                     
                                                     // Атрибуты Drag and Drop (Только для Admin)
                                                     draggable={isReorderMode && isAdmin}
@@ -1856,7 +1884,8 @@
 
                     {/* Main Content */}
                     <main className="pb-12">
-                        {currentView === 'home' ? <HomeView /> : <AlbumPhotoView />}
+                        {/* ИСПРАВЛЕНО: передаем onOpenImage в AlbumPhotoView */}
+                        {currentView === 'home' ? <HomeView /> : <AlbumPhotoView onOpenImage={handleOpenImage} />}
                     </main>
 
                     {/* Modals */}
@@ -1869,13 +1898,14 @@
                     {/* Модал: Увеличенное изображение с редактированием подписи */}
                     <ImageModal 
                         image={enlargedImage} 
-                        onClose={() => setEnlargedImage(null)} 
+                        // ИСПРАВЛЕНО: используем handleCloseImage
+                        onClose={handleCloseImage} 
                         onSaveCaption={updatePhotoCaption}
                         albumId={selectedAlbum?.id} 
                         onNext={handleNextImage}
                         onPrev={handlePrevImage}
                         isAdmin={isAdmin} 
-                        onSaveScrollPosition={saveScrollPosition}
+                        // ИСПРАВЛЕНО: onSaveScrollPosition убран
                     />
 
                 </div>
