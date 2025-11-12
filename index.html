@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Leon H-Arts: Галерея Фанфиков )</title>
+    <title>Leon H-Arts: Галерея Фанфиков (Исправлено)</title>
 <!-- ФАВИКОНЫ: Сгенерированы через Favicon.io -->
 <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
 <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
@@ -414,12 +414,52 @@
             // === ОБЪЕДИНЕННАЯ СИСТЕМА СОХРАНЕНИЯ ПОЗИЦИИ ПРОКРУТКИ ===
             const scrollPosition = useRef(0);
 
+            // (ИСПРАВЛЕНИЕ)
             // Эта функция вызывается ПЕРЕД ЛЮБЫМ ДЕЙСТВИЕМ, которое может
             // вызвать обновление UI и сброс прокрутки (кроме открытия модала)
+            // const saveScrollPosition = () => {
+            //     scrollPosition.current = window.scrollY || document.documentElement.scrollTop;
+            //     console.log('Scroll position saved:', scrollPosition.current);
+            // };
+            // (КОНЕЦ ИСПРАВЛЕНИЯ)
+            
+            // (ИСПРАВЛЕНИЕ: Возвращаем логику из "Файла 1" с доработкой)
+            const shouldRestoreScroll = useRef(false);
+            const isModalOpening = useRef(false); // Флаг для модального окна
+
             const saveScrollPosition = () => {
                 scrollPosition.current = window.scrollY || document.documentElement.scrollTop;
+                shouldRestoreScroll.current = true;
                 console.log('Scroll position saved:', scrollPosition.current);
             };
+
+            const restoreScrollPosition = () => {
+                // Не восстанавливать, если мы в процессе открытия модала
+                if (isModalOpening.current) {
+                    isModalOpening.current = false; // Сбрасываем флаг
+                    shouldRestoreScroll.current = false; // Также сбрасываем, т.к. мы обработали этот "save"
+                    return; // Пропускаем восстановление
+                }
+                
+                if (shouldRestoreScroll.current) {
+                    // Восстанавливаем с небольшой задержкой, чтобы React успел
+                    // Это гарантирует, что прокрутка применится ПОСЛЕ обновления DOM
+                    setTimeout(() => {
+                         window.scrollTo({
+                            top: scrollPosition.current,
+                            behavior: 'auto'
+                        });
+                    }, 1); // 1ms задержка
+                    shouldRestoreScroll.current = false;
+                }
+            };
+
+            // Восстанавливаем позицию после ЛЮБЫХ изменений состояния
+            useEffect(() => {
+                restoreScrollPosition();
+            });
+            // (КОНЕЦ ИСПРАВЛЕНИЯ)
+
 
             // ИСПРАВЛЕНО: Удалены shouldRestoreScroll, restoreScrollPosition и глобальный useEffect
             // =========================================================
@@ -462,23 +502,25 @@
             // НОВАЯ ФУНКЦИЯ: Вызывается при клике на фото в галерее
             const handleOpenImage = useCallback((image) => {
                 saveScrollPosition(); // 1. Сохраняем текущую прокрутку
-                setEnlargedImage(image); // 2. Открываем модал
+                isModalOpening.current = true; // 2. Ставим флаг, что модал открывается
+                setEnlargedImage(image); // 3. Открываем модал
             }, []); // Зависимостей нет, т.к. saveScrollPosition и setEnlargedImage стабильны
 
             // НОВАЯ ФУНКЦИЯ: Вызывается при закрытии модала
             const handleCloseImage = useCallback(() => {
                 setEnlargedImage(null); // Просто закрываем модал
 
+                // (ИСПРАВЛЕНИЕ: Глобальный useEffect теперь сам справится с восстановлением)
                 // ИСПРАВЛЕНИЕ: Восстанавливаем прокрутку здесь,
                 // но с небольшой задержкой (1мс), чтобы React успел
                 // убрать модал и страница "появилась".
-                setTimeout(() => {
-                    window.scrollTo({
-                        top: scrollPosition.current,
-                        behavior: 'auto'
-                    });
-                    console.log('Restoring scroll (from handleCloseImage) to:', scrollPosition.current);
-                }, 1); 
+                // setTimeout(() => {
+                //     window.scrollTo({
+                //         top: scrollPosition.current,
+                //         behavior: 'auto'
+                //     });
+                //     console.log('Restoring scroll (from handleCloseImage) to:', scrollPosition.current);
+                // }, 1); 
             }, []); // Зависимостей нет, ref-ы и setState - стабильны
             // ===================================
 
