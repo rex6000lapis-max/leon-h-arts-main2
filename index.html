@@ -262,13 +262,13 @@
             const [isSaving, setIsSaving] = useState(false);
             const [isEditPanelOpen, setIsEditPanelOpen] = useState(false); 
             
-            // Устанавливаем флаг, что модальное окно открыто
+            // Устанавливаем флаг, что модальное окно открыто, и сохраняем позицию ТОЛЬКО при открытии
             useEffect(() => {
-                // Сохраняем позицию только при открытии, не при каждом рендере
+                console.log('ImageModal mounted - setting modal open and saving scroll');
                 onSaveScrollPosition();
                 
                 return () => {
-                    // При закрытии модального окна ничего не делаем - позиция уже сохранена
+                    console.log('ImageModal unmounted - setting modal closed');
                 };
             }, [onSaveScrollPosition]); // Только при монтировании/размонтировании
 
@@ -428,43 +428,38 @@
 
         // Главный компонент приложения
         const App = () => {
-            // === УЛУЧШЕННАЯ СИСТЕМА СОХРАНЕНИЯ ПОЗИЦИИ ПРОКРУТКИ ===
+            // === ИСПРАВЛЕННАЯ СИСТЕМА СОХРАНЕНИЯ ПОЗИЦИИ ПРОКРУТКИ ===
             const scrollPosition = useRef(0);
             const shouldRestoreScroll = useRef(false);
             const isModalOpen = useRef(false);
-            const isSavingScroll = useRef(false); // Новый флаг для предотвращения конфликтов
 
             const saveScrollPosition = useCallback(() => {
-                // Не сохраняем позицию, если модальное окно открыто или идет процесс сохранения
-                if (isModalOpen.current || isSavingScroll.current) {
+                // Не сохраняем позицию, если модальное окно уже открыто
+                if (isModalOpen.current) {
+                    console.log('Skip saving scroll position - modal is already open');
                     return;
                 }
                 
-                isSavingScroll.current = true;
                 const currentScroll = window.scrollY || document.documentElement.scrollTop;
                 if (currentScroll > 0) {
                     scrollPosition.current = currentScroll;
                     shouldRestoreScroll.current = true;
                     console.log('Scroll position saved:', scrollPosition.current);
                 }
-                // Сбрасываем флаг после небольшой задержки
-                setTimeout(() => {
-                    isSavingScroll.current = false;
-                }, 100);
             }, []);
 
             const restoreScrollPosition = useCallback(() => {
+                // Восстанавливаем только если есть что восстанавливать и нет открытых модальных окон
                 if (shouldRestoreScroll.current && scrollPosition.current > 0 && !isModalOpen.current) {
                     console.log('Restoring scroll to:', scrollPosition.current);
                     
-                    // Используем несколько попыток для надежности
                     const attemptScroll = () => {
                         window.scrollTo({
                             top: scrollPosition.current,
                             behavior: 'auto'
                         });
                         
-                        // Проверяем успешность и при необходимости повторяем
+                        // Проверяем успешность через небольшой интервал
                         setTimeout(() => {
                             const currentScroll = window.scrollY || document.documentElement.scrollTop;
                             if (Math.abs(currentScroll - scrollPosition.current) > 10) {
@@ -482,12 +477,8 @@
                 }
             }, []);
 
-            // Восстанавливаем позицию после рендера
-            useEffect(() => {
-                if (shouldRestoreScroll.current) {
-                    restoreScrollPosition();
-                }
-            });
+            // УБРАН автоматический вызов restoreScrollPosition при каждом рендере
+            // Теперь восстановление будет вызываться только вручную в нужных местах
 
             // Используем '|| false' для authReady, чтобы убедиться, что состояние определено
             const [authReady, setAuthReady] = useState(false);
@@ -670,7 +661,11 @@
                 if (!isDeleteMode) { 
                     setIsReorderMode(false); // Отключаем переупорядочивание
                 }
-            }, [isDeleteMode, isAdmin, saveScrollPosition]);
+                // Восстанавливаем после переключения режима
+                setTimeout(() => {
+                    restoreScrollPosition();
+                }, 100);
+            }, [isDeleteMode, isAdmin, saveScrollPosition, restoreScrollPosition]);
 
             const toggleReorderMode = useCallback(() => {
                 if (!isAdmin) return; // ! Проверка Admin
@@ -679,7 +674,11 @@
                 if (!isReorderMode) { 
                     setIsDeleteMode(false); // Отключаем удаление
                 }
-            }, [isReorderMode, isAdmin, saveScrollPosition]);
+                // Восстанавливаем после переключения режима
+                setTimeout(() => {
+                    restoreScrollPosition();
+                }, 100);
+            }, [isReorderMode, isAdmin, saveScrollPosition, restoreScrollPosition]);
             // -----------------------------------------
 
             const handleGoHome = useCallback(() => {
@@ -688,7 +687,11 @@
                 setCurrentView('home');
                 setIsDeleteMode(false); 
                 setIsReorderMode(false);
-            }, [saveScrollPosition]); 
+                // Восстанавливаем после навигации
+                setTimeout(() => {
+                    restoreScrollPosition();
+                }, 100);
+            }, [saveScrollPosition, restoreScrollPosition]); 
 
             const handleOpenAlbum = useCallback((album) => {
                 saveScrollPosition();
@@ -696,13 +699,18 @@
                 setCurrentView('album');
                 setIsDeleteMode(false); 
                 setIsReorderMode(false);
-            }, [saveScrollPosition]); 
+                // Восстанавливаем после навигации
+                setTimeout(() => {
+                    restoreScrollPosition();
+                }, 100);
+            }, [saveScrollPosition, restoreScrollPosition]); 
 
             // ОБНОВЛЕННАЯ ФУНКЦИЯ ДЛЯ ЗАКРЫТИЯ МОДАЛЬНОГО ОКНА ИЗОБРАЖЕНИЯ
             const handleCloseImageModal = useCallback(() => {
-                isModalOpen.current = false;
+                console.log('Closing image modal, restoring scroll');
                 setEnlargedImage(null);
-                // Восстанавливаем позицию после закрытия модального окна
+                
+                // Восстанавливаем позицию только при закрытии модального окна
                 setTimeout(() => {
                     restoreScrollPosition();
                 }, 100);
@@ -901,6 +909,11 @@
                         }
                     }
 
+                    // Восстанавливаем позицию после удаления
+                    setTimeout(() => {
+                        restoreScrollPosition();
+                    }, 100);
+
                 } catch (e) {
                     console.error("Ошибка при удалении элемента:", e);
                     alertUser('Ошибка', 'Не удалось удалить элемент.');
@@ -983,6 +996,11 @@
                         images: list
                     });
                     console.log("Порядок элементов галереи обновлен в Firestore.");
+                    
+                    // Восстанавливаем позицию после изменения порядка
+                    setTimeout(() => {
+                        restoreScrollPosition();
+                    }, 100);
                 } catch (error) {
                     console.error("Ошибка обновления порядка:", error);
                     alertUser('Ошибка', 'Не удалось сохранить новый порядок элементов.');
@@ -990,7 +1008,7 @@
                 
                 dragItemUniqueId.current = null;
                 dragOverItemUniqueId.current = null;
-            }, [isReorderMode, isAdmin, selectedAlbum, db, saveScrollPosition]);
+            }, [isReorderMode, isAdmin, selectedAlbum, db, saveScrollPosition, restoreScrollPosition]);
             // ------------------------------------------------------------------
 
             // **СОЗДАНИЕ РАЗДЕЛИТЕЛЯ**
@@ -1022,6 +1040,11 @@
                     setIsAddDividerModalOpen(false);
                     console.log(`Разделитель "${text}" добавлен в альбом ${albumId}.`);
 
+                    // Восстанавливаем позицию после добавления разделителя
+                    setTimeout(() => {
+                        restoreScrollPosition();
+                    }, 100);
+
                 } catch (e) {
                     console.error("Ошибка при добавлении разделителя:", e);
                     alertUser('Ошибка', 'Не удалось добавить текстовый разделитель.');
@@ -1052,6 +1075,11 @@
                     await addDoc(collection(db, collectionPath), albumData);
                     setIsAddAlbumModalOpen(false);
                     console.log(`Альбом "${name}" создан.`);
+                    
+                    // Восстанавливаем позицию после создания альбома
+                    setTimeout(() => {
+                        restoreScrollPosition();
+                    }, 100);
                 } catch (e) {
                     console.error("Ошибка при создании альбома:", e);
                     alertUser('Ошибка', 'Не удалось создать альбом.');
@@ -1093,7 +1121,7 @@
                     // Восстанавливаем позицию после успешного добавления
                     setTimeout(() => {
                         restoreScrollPosition();
-                    }, 300); // Увеличиваем задержку для гарантии
+                    }, 100);
 
                 } catch (e) {
                     console.error("Ошибка при добавлении ссылки:", e);
@@ -1167,20 +1195,18 @@
             const Modal = ({ isOpen, onClose, title, children }) => {
                 useEffect(() => {
                     if (isOpen) {
+                        console.log('Modal opened - setting modal open and saving scroll');
                         isModalOpen.current = true;
                         saveScrollPosition();
                     } else {
+                        console.log('Modal closed - setting modal closed');
                         isModalOpen.current = false;
-                        // Восстанавливаем позицию после закрытия модального окна
-                        setTimeout(() => {
-                            restoreScrollPosition();
-                        }, 100);
                     }
                     
                     return () => {
                         isModalOpen.current = false;
                     };
-                }, [isOpen, saveScrollPosition, restoreScrollPosition]);
+                }, [isOpen, saveScrollPosition]);
 
                 if (!isOpen) return null;
                 
@@ -1702,7 +1728,7 @@
                                                 <div 
                                                     key={uniqueId} 
                                                     onClick={!isDeleteMode && !isReorderMode ? () => {
-                                                        saveScrollPosition();
+                                                        // УБРАН вызов saveScrollPosition здесь - он будет в ImageModal
                                                         setEnlargedImage(image);
                                                     } : undefined}
                                                     
