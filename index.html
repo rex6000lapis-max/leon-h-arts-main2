@@ -286,9 +286,9 @@
             };
 
             const handleClose = () => {
-                onSaveScrollPosition();
-                onClose();
-            };
+  onClose();
+  setTimeout(() => onSaveScrollPosition(true), 0);
+};
 
             return (
                 <div 
@@ -433,10 +433,6 @@
                 }
             };
 
-            // Восстанавливаем позицию после любых изменений состояния
-            useEffect(() => {
-                restoreScrollPosition();
-            });
 
             // Используем '|| false' для authReady, чтобы убедиться, что состояние определено
             const [authReady, setAuthReady] = useState(false);
