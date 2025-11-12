@@ -456,7 +456,7 @@ document.documentElement.scrollTop;
 
             // Используем '||
             // false' для authReady, чтобы убедиться, что состояние определено // <-- ИСПРАВЛЕНО (синтаксис)
-            const [authReady, setAuthReady] = useState(false); // 
+            const [authReady, setAuthReady] = useState(false); //
 const [userId, setUserId] = useState(null);
             const [albums, setAlbums] = useState([]);
             const [loading, setLoading] = useState(true);
@@ -837,8 +837,8 @@ alertUser('Ошибка', 'Не удалось переименовать аль
             const updatePhotoCaption = async (albumId, photoTimestamp, newCaption) => {
                 saveScrollPosition(); // <-- ДОБАВЛЕНО
                 if (!isAdmin) { // !
-Проверка Admin
-                    alertUser('Ошибка доступа', 'Вы должны быть Администратором для редактирования подписей.');
+                    // Проверка Admin // <-- ИСПРАВЛЕНО
+alertUser('Ошибка доступа', 'Вы должны быть Администратором для редактирования подписей.');
 return;
                 }
                 if (!albumId || !db) {
@@ -882,8 +882,8 @@ alertUser('Ошибка', 'Не удалось сохранить подпись
             const deletePhoto = async (albumId, itemToDelete) => {
                 saveScrollPosition(); // <-- ДОБАВЛЕНО
                 if (!isAdmin) { // !
-Проверка Admin
-                    alertUser('Ошибка доступа', 'Вы должны быть Администратором для удаления элементов.');
+                    // Проверка Admin // <-- ИСПРАВЛЕНО
+alertUser('Ошибка доступа', 'Вы должны быть Администратором для удаления элементов.');
 return;
                 }
                 if (!albumId || !db) { 
@@ -954,7 +954,7 @@ const handleDrop = useCallback(async (e) => {
        }
                 if (!selectedAlbum || !db) { 
                     console.error("FIREBASE ERROR: Album or DB instance is missing for handleDrop.");
-                    alertUser('Критическая ошибка', 'Не удалось изменить порядок: не инициализирован альбом или база данных.');
+                    alertUser('Критическая ошибка', 'Не удалось изменить порядок: не инициализирована альбом или база данных.');
             
         dragItemUniqueId.current = null;
                     dragOverItemUniqueId.current = null;
@@ -1010,12 +1010,12 @@ dragOverItemUniqueId.current = null;
             const addDivider = async (albumId, text) => {
                 saveScrollPosition(); // <-- ДОБАВЛЕНО
                 if (!isAdmin) { // !
-Проверка Admin
-                    alertUser('Ошибка доступа', 'Вы должны быть Администратором для добавления разделителей.');
+                    // Проверка Admin // <-- ИСПРАВЛЕНО
+alertUser('Ошибка доступа', 'Вы должны быть Администратором для добавления разделителей.');
 return;
                 }
                 if (!albumId || !text.trim() || !db) { // !
-Проверка db
+// Проверка db // <-- ИСПРАВЛЕНО
                     alertUser('Критическая ошибка', 'Не удалось добавить разделитель: не инициализирована база данных.');
 return;
                 }
@@ -1047,13 +1047,13 @@ alertUser('Ошибка', 'Не удалось добавить текстовы
             const createNewAlbum = async (name) => {
                 saveScrollPosition(); // <-- ДОБАВЛЕНО
                 if (!isAdmin) { // !
-Проверка Admin
-                    alertUser('Ошибка доступа', 'Вы должны быть Администратором для создания альбомов.');
+                    // Проверка Admin // <-- ИСПРАВЛЕНО
+alertUser('Ошибка доступа', 'Вы должны быть Администратором для создания альбомов.');
 return;
                 }
                 if (!name.trim() || !db) { // !
-Проверка db
-                    alertUser('Критическая ошибка', 'Не удалось создать альбом: не инициализирована база данных.');
+                    // Проверка db // <-- ИСПРАВЛЕНО
+alertUser('Критическая ошибка', 'Не удалось создать альбом: не инициализирована база данных.');
 return;
                 }
 
@@ -1079,13 +1079,13 @@ alertUser('Ошибка', 'Не удалось создать альбом.');
             const addPhotoLink = async (albumId, url, aspectRatio = 1.0) => {
                 saveScrollPosition(); // <-- ДОБАВЛЕНО
                 if (!isAdmin) { // !
-Проверка Admin
-                    alertUser('Ошибка доступа', 'Вы должны быть Администратором для добавления фото.');
+                    // Проверка Admin // <-- ИСПРАВЛЕНО
+alertUser('Ошибка доступа', 'Вы должны быть Администратором для добавления фото.');
 return;
                 }
                 if (!albumId || !url.trim() || !db) { // !
-Проверка db
-                    alertUser('Критическая ошибка', 'Не удалось добавить фото: не инициализирована база данных.');
+                    // Проверка db // <-- ИСПРАВЛЕНО
+alertUser('Критическая ошибка', 'Не удалось добавить фото: не инициализирована база данных.');
 return;
                 }
 
