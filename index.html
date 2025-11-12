@@ -253,10 +253,15 @@
             const [isSaving, setIsSaving] = useState(false);
             const [isEditPanelOpen, setIsEditPanelOpen] = useState(false); 
             
-            // СОХРАНЯЕМ ПОЗИЦИЮ ПРИ ОТКРЫТИИ МОДАЛЬНОГО ОКНА
+            // Устанавливаем флаг, что модальное окно открыто
             useEffect(() => {
+                // Сохраняем позицию перед открытием модального окна
                 onSaveScrollPosition();
-            }, []);
+                
+                return () => {
+                    // При закрытии модального окна ничего не делаем - позиция уже сохранена
+                };
+            }, [onSaveScrollPosition]);
 
             useEffect(() => {
                 setCaption(image.caption || '');
@@ -264,16 +269,13 @@
 
             const handleKeyDown = useCallback((e) => {
                 if (e.key === 'Escape') {
-                    onSaveScrollPosition();
                     onClose();
                 } else if (e.key === 'ArrowRight') {
-                    onSaveScrollPosition();
                     onNext();
                 } else if (e.key === 'ArrowLeft') {
-                    onSaveScrollPosition();
                     onPrev();
                 }
-            }, [onClose, onNext, onPrev, onSaveScrollPosition]);
+            }, [onClose, onNext, onPrev]);
 
             useEffect(() => {
                 document.addEventListener('keydown', handleKeyDown);
@@ -294,9 +296,8 @@
             };
 
             const handleClose = useCallback(() => {
-                onSaveScrollPosition();
                 onClose();
-            }, [onSaveScrollPosition, onClose]);
+            }, [onClose]);
 
             return (
                 <div 
@@ -329,7 +330,7 @@
                     {/* --- Левая/Правая навигация --- */}
                     <div 
                         className="fixed-click-zone left group"
-                        onClick={(e) => { e.stopPropagation(); onSaveScrollPosition(); onPrev(); }}
+                        onClick={(e) => { e.stopPropagation(); onPrev(); }}
                         title="Предыдущее фото (Стрелка влево)"
                     >
                         <button className="nav-arrow opacity-0 group-hover:opacity-100 transition-opacity">
@@ -338,7 +339,7 @@
                     </div>
                     <div 
                         className="fixed-click-zone right group"
-                        onClick={(e) => { e.stopPropagation(); onSaveScrollPosition(); onNext(); }}
+                        onClick={(e) => { e.stopPropagation(); onNext(); }}
                         title="Следующее фото (Стрелка вправо)"
                     >
                         <button className="nav-arrow opacity-0 group-hover:opacity-100 transition-opacity">
@@ -421,35 +422,44 @@
             // === УЛУЧШЕННАЯ СИСТЕМА СОХРАНЕНИЯ ПОЗИЦИИ ПРОКРУТКИ ===
             const scrollPosition = useRef(0);
             const shouldRestoreScroll = useRef(false);
+            const isModalOpen = useRef(false);
 
             const saveScrollPosition = useCallback(() => {
-                scrollPosition.current = window.scrollY || document.documentElement.scrollTop;
-                shouldRestoreScroll.current = true;
-                console.log('Scroll position saved:', scrollPosition.current);
+                // Не сохраняем позицию, если модальное окно открыто
+                if (isModalOpen.current) {
+                    console.log('Skip saving scroll position - modal is open');
+                    return;
+                }
+                
+                const currentScroll = window.scrollY || document.documentElement.scrollTop;
+                if (currentScroll > 0) {
+                    scrollPosition.current = currentScroll;
+                    shouldRestoreScroll.current = true;
+                    console.log('Scroll position saved:', scrollPosition.current);
+                }
             }, []);
 
             const restoreScrollPosition = useCallback(() => {
                 if (shouldRestoreScroll.current && scrollPosition.current > 0) {
                     console.log('Restoring scroll to:', scrollPosition.current);
                     
-                    // Используем requestAnimationFrame для надежного восстановления
                     requestAnimationFrame(() => {
                         window.scrollTo({
                             top: scrollPosition.current,
                             behavior: 'auto'
                         });
                         
-                        // Дополнительная проверка через небольшой интервал
                         setTimeout(() => {
                             const currentScroll = window.scrollY || document.documentElement.scrollTop;
-                            if (Math.abs(currentScroll - scrollPosition.current) > 50) {
+                            if (Math.abs(currentScroll - scrollPosition.current) > 10) {
+                                console.log('Second attempt to restore scroll');
                                 window.scrollTo({
                                     top: scrollPosition.current,
                                     behavior: 'auto'
                                 });
                             }
                             shouldRestoreScroll.current = false;
-                        }, 50);
+                        }, 100);
                     });
                 }
             }, []);
@@ -565,10 +575,13 @@
 
             // Функция для закрытия модала переименования
             const handleCloseRenameModal = useCallback(() => {
-                saveScrollPosition();
                 setIsRenameModalOpen(false);
                 setAlbumToRename(null);
-            }, [saveScrollPosition]);
+                // Восстанавливаем позицию после закрытия модального окна
+                setTimeout(() => {
+                    restoreScrollPosition();
+                }, 50);
+            }, [restoreScrollPosition]);
 
             // --- ЛОГИКА АДМИНИСТРАТОРА (Login/Logout) ---
             const handleAdminLogin = async (email, password) => {
@@ -623,14 +636,12 @@
             }, [enlargedImage, selectedAlbum]);
 
             const handleNextImage = useCallback(() => {
-                saveScrollPosition();
                 handleNavigation('next');
-            }, [saveScrollPosition, handleNavigation]);
+            }, [handleNavigation]);
 
             const handlePrevImage = useCallback(() => {
-                saveScrollPosition();
                 handleNavigation('prev');
-            }, [saveScrollPosition, handleNavigation]);
+            }, [handleNavigation]);
             // --------------------------------------------------
 
             // Управление режимами редактирования
@@ -671,9 +682,13 @@
 
             // ОБНОВЛЕННАЯ ФУНКЦИЯ ДЛЯ ЗАКРЫТИЯ МОДАЛЬНОГО ОКНА ИЗОБРАЖЕНИЯ
             const handleCloseImageModal = useCallback(() => {
-                saveScrollPosition();
+                isModalOpen.current = false;
                 setEnlargedImage(null);
-            }, [saveScrollPosition]);
+                // Восстанавливаем позицию после закрытия модального окна
+                setTimeout(() => {
+                    restoreScrollPosition();
+                }, 50);
+            }, [restoreScrollPosition]);
 
             const alertUser = (title, message) => {
                 // Простая реализация модального окна/сообщения
@@ -1132,12 +1147,18 @@
             );
 
             const Modal = ({ isOpen, onClose, title, children }) => {
-                // СОХРАНЯЕМ ПОЗИЦИЮ ПРИ ОТКРЫТИИ ЛЮБОГО МОДАЛЬНОГО ОКНА
                 useEffect(() => {
                     if (isOpen) {
+                        isModalOpen.current = true;
                         saveScrollPosition();
+                    } else {
+                        isModalOpen.current = false;
+                        // Восстанавливаем позицию после закрытия модального окна
+                        setTimeout(() => {
+                            restoreScrollPosition();
+                        }, 50);
                     }
-                }, [isOpen, saveScrollPosition]);
+                }, [isOpen, saveScrollPosition, restoreScrollPosition]);
 
                 if (!isOpen) return null;
                 
