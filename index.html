@@ -1417,8 +1417,6 @@
                     const rows = [];
                     
                     const calculateGapWidth = (count) => (count - 1) * GALLERY_GAP_PX;
-                    const minHeight = TARGET_ROW_HEIGHT * 0.7;
-                    const maxHeight = TARGET_ROW_HEIGHT * MAX_ROW_HEIGHT_MULTIPLIER;
 
                     const finalizePhotoRow = (row, isLastRow = false) => {
                         if (row.length === 0) return;
@@ -1430,13 +1428,15 @@
                         let finalRowHeight = rowContainerWidth / totalAspect;
                         
                         // Ограничиваем высоту
+                        const maxHeight = TARGET_ROW_HEIGHT * MAX_ROW_HEIGHT_MULTIPLIER;
                         if (finalRowHeight > maxHeight) {
                             finalRowHeight = maxHeight;
                         }
                         
                         // Для последнего ряда допускаем немного меньшую высоту
+                        const minHeight = TARGET_ROW_HEIGHT * 0.7;
                         if (isLastRow && finalRowHeight < minHeight) {
-                            finalRowHeight = Math.max(finalRowHeight, minHeight * 0.8);
+                            finalRowHeight = minHeight * 0.9;
                         } else if (finalRowHeight < minHeight) {
                             finalRowHeight = minHeight;
                         }
@@ -1447,7 +1447,7 @@
                             width: img.aspectRatio * finalRowHeight,
                         }));
                         
-                        rows.push({ type: 'photoRow', content: finalRow, uniqueId: rows.length });
+                        rows.push({ type: 'photoRow', content: finalRow, uniqueId: Date.now() + Math.random() });
                     };
 
                     // Сначала группируем контент по разделам
@@ -1478,7 +1478,9 @@
                         }
 
                         // Обрабатываем фото в секции
-                        let sectionPhotos = section.filter(item => item.type !== 'divider' && item.aspectRatio > 0 && item.url);
+                        const sectionPhotos = section.filter(item => item.type !== 'divider' && item.aspectRatio > 0 && item.url);
+                        
+                        if (sectionPhotos.length === 0) continue;
                         
                         let currentRow = [];
                         let currentRowTotalAspect = 0;
@@ -1490,34 +1492,25 @@
                             const potentialGapWidth = calculateGapWidth(potentialCount);
                             const potentialHeight = (containerWidth - potentialGapWidth) / potentialAspect;
                             
-                            // Проверяем, можно ли добавить фото в текущий ряд
-                            const canAddToCurrentRow = potentialHeight >= minHeight && 
-                                                     potentialHeight <= maxHeight &&
-                                                     potentialCount <= 6; // Максимум 6 фото в ряду
+                            // Проверяем, нужно ли завершить текущий ряд
+                            const shouldFinalizeRow = 
+                                currentRow.length > 0 && 
+                                (potentialHeight < TARGET_ROW_HEIGHT * 0.8 || 
+                                 potentialCount > 6); // Максимум 6 фото в ряду
                             
-                            // Если можно добавить в текущий ряд, добавляем
-                            if (canAddToCurrentRow || currentRow.length === 0) {
+                            if (shouldFinalizeRow) {
+                                finalizePhotoRow(currentRow, false);
+                                currentRow = [photo];
+                                currentRowTotalAspect = photo.aspectRatio;
+                            } else {
                                 currentRow.push(photo);
                                 currentRowTotalAspect = potentialAspect;
-                            } else {
-                                // Если нельзя добавить, завершаем текущий ряд
-                                if (currentRow.length > 0) {
-                                    finalizePhotoRow(currentRow, false);
-                                    currentRow = [photo];
-                                    currentRowTotalAspect = photo.aspectRatio;
-                                }
                             }
                             
-                            // Если это последнее фото в секции, завершаем ряд
-                            if (i === sectionPhotos.length - 1 && currentRow.length > 0) {
+                            // Если это последняя фотка, завершаем ряд
+                            if (i === sectionPhotos.length - 1) {
                                 finalizePhotoRow(currentRow, true);
                             }
-                        }
-                        
-                        // Обработка оставшихся фото, которые не вошли в ряды
-                        // (это маловероятно, но на всякий случай)
-                        if (currentRow.length > 0 && !rows.some(row => row.type === 'photoRow' && row.content === currentRow)) {
-                            finalizePhotoRow(currentRow, true);
                         }
                     }
                     
