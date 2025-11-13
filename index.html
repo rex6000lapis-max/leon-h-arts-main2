@@ -241,7 +241,7 @@
 
         const TARGET_ROW_HEIGHT = 300; 
         const GALLERY_GAP_PX = 2; 
-        const MAX_ROW_HEIGHT_MULTIPLIER = 1.5; 
+        const MAX_ROW_HEIGHT_MULTIPLIER = 1.3; // Уменьшено с 1.5 для предотвращения огромных фото
 
         // --- КОМПОНЕНТ: Модальное окно для увеличенного изображения ---
         const ImageModal = ({ image, onClose, onSaveCaption, albumId, onNext, onPrev, isAdmin }) => {
@@ -1427,15 +1427,16 @@
 
                         let finalRowHeight = rowContainerWidth / totalAspect;
                         
-                        if (!isLastRow) {
-                            const maxHeight = TARGET_ROW_HEIGHT * MAX_ROW_HEIGHT_MULTIPLIER;
-                            if (finalRowHeight > maxHeight) {
-                                finalRowHeight = maxHeight;
-                            }
-                        } else {
-                            if (finalRowHeight > TARGET_ROW_HEIGHT * 1.2) {
-                                finalRowHeight = TARGET_ROW_HEIGHT;
-                            }
+                        // Ограничиваем максимальную высоту для всех рядов
+                        const maxHeight = TARGET_ROW_HEIGHT * MAX_ROW_HEIGHT_MULTIPLIER;
+                        if (finalRowHeight > maxHeight) {
+                            finalRowHeight = maxHeight;
+                        }
+                        
+                        // Также ограничиваем минимальную высоту
+                        const minHeight = TARGET_ROW_HEIGHT * 0.7;
+                        if (finalRowHeight < minHeight && !isLastRow) {
+                            finalRowHeight = minHeight;
                         }
                         
                         const finalRow = row.map(img => ({
@@ -1480,19 +1481,25 @@
                         while (sectionPhotos.length > 0) {
                             let bestRow = [];
                             let bestRowTotalAspect = 0;
-                            let bestRowHeight = 0;
                             let minWaste = Infinity;
 
+                            // Максимальное количество фото в ряду - ограничиваем чтобы избежать слишком маленьких фото
+                            const maxPhotosInRow = Math.min(sectionPhotos.length, 5);
+                            
                             // Пытаемся найти оптимальную комбинацию для ряда
-                            for (let i = 1; i <= sectionPhotos.length; i++) {
+                            for (let i = 1; i <= maxPhotosInRow; i++) {
                                 const candidateRow = sectionPhotos.slice(0, i);
                                 const candidateAspect = candidateRow.reduce((sum, img) => sum + img.aspectRatio, 0);
                                 const rowGapWidth = calculateGapWidth(candidateRow.length);
                                 const rowContainerWidth = containerWidth - rowGapWidth;
                                 const candidateHeight = rowContainerWidth / candidateAspect;
 
-                                // Проверяем, не слишком ли высокий/низкий ряд
-                                if (candidateHeight > TARGET_ROW_HEIGHT * MAX_ROW_HEIGHT_MULTIPLIER) {
+                                // Проверяем ограничения по высоте
+                                const maxHeight = TARGET_ROW_HEIGHT * MAX_ROW_HEIGHT_MULTIPLIER;
+                                const minHeight = TARGET_ROW_HEIGHT * 0.7;
+                                
+                                // Если высота выходит за пределы допустимого, пропускаем эту комбинацию
+                                if (candidateHeight > maxHeight || candidateHeight < minHeight) {
                                     continue;
                                 }
 
@@ -1504,7 +1511,6 @@
                                     minWaste = waste;
                                     bestRow = candidateRow;
                                     bestRowTotalAspect = candidateAspect;
-                                    bestRowHeight = candidateHeight;
                                 }
 
                                 // Если достигли хорошего результата, можно остановиться
@@ -1513,33 +1519,38 @@
                                 }
                             }
 
-                            // Если не нашли подходящую комбинацию, берем хотя бы одну фотографию
+                            // Если не нашли подходящую комбинацию, используем эвристику
                             if (bestRow.length === 0 && sectionPhotos.length > 0) {
-                                bestRow = [sectionPhotos[0]];
-                                bestRowTotalAspect = sectionPhotos[0].aspectRatio;
-                                const rowGapWidth = calculateGapWidth(1);
+                                // Пробуем разные стратегии для избежания огромных фото
+                                
+                                // Стратегия 1: берем первые 2-3 фото
+                                let candidateLength = Math.min(sectionPhotos.length, 3);
+                                bestRow = sectionPhotos.slice(0, candidateLength);
+                                bestRowTotalAspect = bestRow.reduce((sum, img) => sum + img.aspectRatio, 0);
+                                
+                                // Проверяем высоту
+                                const rowGapWidth = calculateGapWidth(bestRow.length);
                                 const rowContainerWidth = containerWidth - rowGapWidth;
-                                bestRowHeight = rowContainerWidth / bestRowTotalAspect;
+                                let candidateHeight = rowContainerWidth / bestRowTotalAspect;
+                                
+                                // Если все еще слишком высоко, пробуем взять больше фото
+                                if (candidateHeight > TARGET_ROW_HEIGHT * MAX_ROW_HEIGHT_MULTIPLIER && sectionPhotos.length > candidateLength) {
+                                    candidateLength = Math.min(sectionPhotos.length, 4);
+                                    bestRow = sectionPhotos.slice(0, candidateLength);
+                                    bestRowTotalAspect = bestRow.reduce((sum, img) => sum + img.aspectRatio, 0);
+                                    candidateHeight = (containerWidth - calculateGapWidth(candidateLength)) / bestRowTotalAspect;
+                                }
+                                
+                                // Если все еще проблема, берем только первое фото но ограничиваем высоту
+                                if (candidateHeight > TARGET_ROW_HEIGHT * MAX_ROW_HEIGHT_MULTIPLIER) {
+                                    bestRow = [sectionPhotos[0]];
+                                    bestRowTotalAspect = sectionPhotos[0].aspectRatio;
+                                }
                             }
 
                             if (bestRow.length > 0) {
                                 const isLastRowInSection = bestRow.length === sectionPhotos.length;
-                                const rowGapWidth = calculateGapWidth(bestRow.length);
-                                const rowContainerWidth = containerWidth - rowGapWidth;
-                                let finalRowHeight = rowContainerWidth / bestRowTotalAspect;
-
-                                // Корректируем высоту для последнего ряда в секции
-                                if (isLastRowInSection && finalRowHeight > TARGET_ROW_HEIGHT * 1.2) {
-                                    finalRowHeight = TARGET_ROW_HEIGHT;
-                                }
-
-                                const finalRow = bestRow.map(img => ({
-                                    ...img,
-                                    height: finalRowHeight,
-                                    width: img.aspectRatio * finalRowHeight,
-                                }));
-
-                                rows.push({ type: 'photoRow', content: finalRow, uniqueId: rows.length });
+                                finalizePhotoRow(bestRow, isLastRowInSection);
                                 
                                 // Удаляем использованные фото из секции
                                 sectionPhotos = sectionPhotos.slice(bestRow.length);
