@@ -1418,7 +1418,6 @@
                     
                     const calculateGapWidth = (count) => (count - 1) * GALLERY_GAP_PX;
 
-                    // *** НАЧАЛО ИЗМЕНЕНИЙ ЛОГИКИ ***
                     const finalizePhotoRow = (row, isLastRow = false) => {
                         if (row.length === 0) return;
 
@@ -1426,33 +1425,21 @@
                         const rowContainerWidth = containerWidth - rowGapWidth;
                         const totalAspect = row.reduce((sum, img) => sum + img.aspectRatio, 0);
 
-                        let finalRowHeight;
-                        let isJustified = true; // Флаг для определения, выравнивать ли ряд по ширине
-
-                        // Рассчитываем "идеальное" соотношение сторон для ряда при целевой высоте
-                        const idealAspect = rowContainerWidth / TARGET_ROW_HEIGHT;
-                        // Считаем ряд "слишком пустым", если он заполнен менее чем на 75%
-                        const isTooEmpty = totalAspect < (idealAspect * 0.75); 
-
-                        // if (isLastRow && isTooEmpty) { ... } 
-                        // Убираем специальную логику для последнего ряда.
-                        // Теперь все ряды будут растягиваться.
+                        let finalRowHeight = rowContainerWidth / totalAspect;
                         
-                             // Для всех остальных рядов (полных или "достаточно полных" последних)
-                             // используем выравнивание по ширине
-                             finalRowHeight = rowContainerWidth / totalAspect;
-                            
-                             // Ограничиваем высоту
-                             const maxHeight = TARGET_ROW_HEIGHT * MAX_ROW_HEIGHT_MULTIPLIER;
-                             const minHeight = TARGET_ROW_HEIGHT * 0.7;
- 
-                             if (finalRowHeight > maxHeight) {
-                                 finalRowHeight = maxHeight;
-                             } else if (finalRowHeight < minHeight) {
-                                 finalRowHeight = minHeight;
-                             }
-                             isJustified = true;
-                        // }
+                        // Ограничиваем высоту
+                        const maxHeight = TARGET_ROW_HEIGHT * MAX_ROW_HEIGHT_MULTIPLIER;
+                        if (finalRowHeight > maxHeight) {
+                            finalRowHeight = maxHeight;
+                        }
+                        
+                        // Для последнего ряда допускаем немного меньшую высоту
+                        const minHeight = TARGET_ROW_HEIGHT * 0.7;
+                        if (isLastRow && finalRowHeight < minHeight) {
+                            finalRowHeight = minHeight * 0.9;
+                        } else if (finalRowHeight < minHeight) {
+                            finalRowHeight = minHeight;
+                        }
                         
                         const finalRow = row.map(img => ({
                             ...img,
@@ -1460,11 +1447,8 @@
                             width: img.aspectRatio * finalRowHeight,
                         }));
                         
-                        // Передаем флаг isJustified в данные о ряде
-                        // (isJustified всегда true, так что можно его не передавать, но оставим для консистентности)
-                        rows.push({ type: 'photoRow', content: finalRow, uniqueId: Date.now() + Math.random(), isJustified: true });
+                        rows.push({ type: 'photoRow', content: finalRow, uniqueId: Date.now() + Math.random() });
                     };
-                    // *** КОНЕЦ ИЗМЕНЕНИЙ ЛОГИКИ ***
 
                     // Сначала группируем контент по разделам
                     const sections = [];
@@ -1488,10 +1472,6 @@
                     // Обрабатываем каждую секцию отдельно
                     for (const section of sections) {
                         if (section.length === 1 && section[0].type === 'divider') {
-                            // Если это разделитель, который идет *сразу* после
-                            // фото-секции (которая только что была обработана),
-                            // то `rows` уже содержит фото-ряды.
-                            // Просто добавляем разделитель.
                             // Добавляем разделитель
                             rows.push({ type: 'dividerRow', content: section[0], uniqueId: section[0].timestamp });
                             continue;
@@ -1502,70 +1482,29 @@
                         
                         if (sectionPhotos.length === 0) continue;
                         
-                        const targetRowAspect = containerWidth / TARGET_ROW_HEIGHT;
-
                         let currentRow = [];
                         let currentRowTotalAspect = 0;
                         
                         for (let i = 0; i < sectionPhotos.length; i++) {
                             const photo = sectionPhotos[i];
-                            const potentialAspect = currentRowTotalAspect + photo.aspectRatio;
-                            const potentialCount = currentRow.length + 1;
-                            const potentialGapWidth = calculateGapWidth(potentialCount);
-                            const potentialHeight = (containerWidth - potentialGapWidth) / potentialAspect;
-                            
-                            // Проверяем, нужно ли завершить текущий ряд
-                            const shouldFinalizeRow = 
-                                (potentialHeight < TARGET_ROW_HEIGHT * 0.8 || // Становится слишком "коротким" (много фото)
-                                 potentialCount > 7); // Максимум 7 фото в ряду
-                            
-                            if (shouldFinalizeRow) {
-                                finalizePhotoRow(currentRow, false); // `isLastRow` больше не используется для растягивания
-                                currentRow = [photo];
-                                currentRowTotalAspect = photo.aspectRatio;
+                            currentRow.push(photo);
+                            currentRowTotalAspect += photo.aspectRatio;
+
+                            const isLastPhotoInSection = i === sectionPhotos.length - 1;
+
+                            if (isLastPhotoInSection) {
+                                finalizePhotoRow(currentRow, true);
                             } else {
-                                currentRow.push(photo);
-                                currentRowTotalAspect = potentialAspect;
-                            }
-                            
-                            // *** НАЧАЛО НОВОЙ ЛОГИКИ ***
-                            // Если это последняя фотка в секции
-                            if (i === sectionPhotos.length - 1) {
-                                // Проверяем, "слишком ли пустой" этот последний ряд
-                                const isTooEmpty = currentRowTotalAspect < (targetRowAspect * 0.75);
+                                const rowGapWidth = calculateGapWidth(currentRow.length);
+                                const rowContainerWidth = containerWidth - rowGapWidth;
+                                const currentRowHeight = rowContainerWidth / currentRowTotalAspect;
 
-                                if (isTooEmpty && rows.length > 0) {
-                                    // Ряд "слишком пустой" И ЕСТЬ предыдущий ряд в этой секции
-                                    
-                                    // 1. Получаем последний добавленный ряд (он должен быть фото-рядом)
-                                    const lastFinalizedRowData = rows.pop();
-
-                                    if (lastFinalizedRowData && lastFinalizedRowData.type === 'photoRow') {
-                                        // 2. Объединяем фотографии из предпоследнего и последнего рядов
-                                        const combinedPhotos = [...lastFinalizedRowData.content, ...currentRow];
-
-                                        // 3. Перераспределяем их: делим объединенный массив на 2 новых ряда
-                                        // (простой способ - делим пополам по количеству)
-                                        const midIndex = Math.ceil(combinedPhotos.length / 2);
-                                        const newRow1_photos = combinedPhotos.slice(0, midIndex);
-                                        const newRow2_photos = combinedPhotos.slice(midIndex);
-
-                                        // 4. Финализируем оба новых, более сбалансированных ряда
-                                        finalizePhotoRow(newRow1_photos, false);
-                                        finalizePhotoRow(newRow2_photos, false);
-                                    } else {
-                                        // Если последний элемент не был фото-рядом (например, разделитель - хотя это не должно случиться)
-                                        // возвращаем его обратно и просто финализируем "пустой" ряд.
-                                        if (lastFinalizedRowData) rows.push(lastFinalizedRowData);
-                                        finalizePhotoRow(currentRow, false);
-                                    }
-                                } else {
-                                    // Последний ряд "достаточно полный" ИЛИ это единственный ряд в секции.
-                                    // Финализируем его как обычно.
+                                if (currentRowHeight < TARGET_ROW_HEIGHT * 0.7 || currentRow.length >= 6) {
                                     finalizePhotoRow(currentRow, false);
+                                    currentRow = [];
+                                    currentRowTotalAspect = 0;
                                 }
                             }
-                            // *** КОНЕЦ НОВОЙ ЛОГИКИ ***
                         }
                     }
                     
@@ -1635,20 +1574,12 @@
                                 }
 
                                 const row = rowWrapper.content;
-                                // *** НАЧАЛО ИЗМЕНЕНИЙ В РЕНДЕРЕ ***
-                                // Получаем флаг isJustified из объекта ряда, по умолчанию true
-                                const isJustified = rowWrapper.isJustified !== false; 
-                                
                                 return (
                                     <div
                                         key={key}
                                         className="flex overflow-hidden"
-                                        style={{ 
-                                            marginBottom: `${GALLERY_GAP_PX}px`,
-                                            // (убираем justify-content, так как теперь все ряды растягиваются по умолчанию)
-                                        }}
+                                        style={{ marginBottom: `${GALLERY_GAP_PX}px` }}
                                     >
-                                    {/* *** КОНЕЦ ИЗМЕНЕНИЙ В РЕНДЕРЕ *** */}
                                         {row.map((image, imageIndex) => {
                                             const uniqueId = image.timestamp;
 
