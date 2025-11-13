@@ -1415,8 +1415,6 @@
                     if (containerWidth <= 0) return [];
                     
                     const rows = [];
-                    let currentRow = [];
-                    let currentRowTotalAspect = 0;
                     
                     const calculateGapWidth = (count) => (count - 1) * GALLERY_GAP_PX;
 
@@ -1449,33 +1447,106 @@
                         rows.push({ type: 'photoRow', content: finalRow, uniqueId: rows.length });
                     };
 
+                    // Сначала группируем контент по разделам
+                    const sections = [];
+                    let currentSection = [];
+                    
                     for (const item of allContent) {
                         if (item.type === 'divider') {
-                            if (currentRow.length > 0) {
-                                finalizePhotoRow(currentRow);
-                                currentRow = [];
-                                currentRowTotalAspect = 0;
+                            if (currentSection.length > 0) {
+                                sections.push(currentSection);
+                                currentSection = [];
                             }
-                            rows.push({ type: 'dividerRow', content: item, uniqueId: item.timestamp });
-                        } else if (item.aspectRatio > 0 && item.url) {
-                            const potentialAspect = currentRowTotalAspect + item.aspectRatio;
-                            const rowCount = currentRow.length + 1;
-                            const potentialRowHeight = (containerWidth - calculateGapWidth(rowCount)) / potentialAspect;
-                            const shouldStartNewRow = currentRow.length > 0 && potentialRowHeight < TARGET_ROW_HEIGHT * 0.95;
-
-                            if (shouldStartNewRow) {
-                                finalizePhotoRow(currentRow);
-                                currentRow = [item];
-                                currentRowTotalAspect = item.aspectRatio;
-                            } else {
-                                currentRow.push(item);
-                                currentRowTotalAspect = potentialAspect;
-                            }
+                            sections.push([item]);
+                        } else {
+                            currentSection.push(item);
                         }
                     }
-                    
-                    if (currentRow.length > 0) {
-                        finalizePhotoRow(currentRow, true);
+                    if (currentSection.length > 0) {
+                        sections.push(currentSection);
+                    }
+
+                    // Обрабатываем каждую секцию отдельно
+                    for (const section of sections) {
+                        if (section.length === 1 && section[0].type === 'divider') {
+                            // Добавляем разделитель
+                            rows.push({ type: 'dividerRow', content: section[0], uniqueId: section[0].timestamp });
+                            continue;
+                        }
+
+                        // Обрабатываем фото в секции
+                        let sectionPhotos = section.filter(item => item.type !== 'divider' && item.aspectRatio > 0 && item.url);
+                        
+                        while (sectionPhotos.length > 0) {
+                            let bestRow = [];
+                            let bestRowTotalAspect = 0;
+                            let bestRowHeight = 0;
+                            let minWaste = Infinity;
+
+                            // Пытаемся найти оптимальную комбинацию для ряда
+                            for (let i = 1; i <= sectionPhotos.length; i++) {
+                                const candidateRow = sectionPhotos.slice(0, i);
+                                const candidateAspect = candidateRow.reduce((sum, img) => sum + img.aspectRatio, 0);
+                                const rowGapWidth = calculateGapWidth(candidateRow.length);
+                                const rowContainerWidth = containerWidth - rowGapWidth;
+                                const candidateHeight = rowContainerWidth / candidateAspect;
+
+                                // Проверяем, не слишком ли высокий/низкий ряд
+                                if (candidateHeight > TARGET_ROW_HEIGHT * MAX_ROW_HEIGHT_MULTIPLIER) {
+                                    continue;
+                                }
+
+                                // Вычисляем "отходы" - насколько далеко от целевой высоты
+                                const waste = Math.abs(candidateHeight - TARGET_ROW_HEIGHT);
+
+                                // Если это лучшая комбинация на данный момент, сохраняем её
+                                if (waste < minWaste) {
+                                    minWaste = waste;
+                                    bestRow = candidateRow;
+                                    bestRowTotalAspect = candidateAspect;
+                                    bestRowHeight = candidateHeight;
+                                }
+
+                                // Если достигли хорошего результата, можно остановиться
+                                if (waste < TARGET_ROW_HEIGHT * 0.1) {
+                                    break;
+                                }
+                            }
+
+                            // Если не нашли подходящую комбинацию, берем хотя бы одну фотографию
+                            if (bestRow.length === 0 && sectionPhotos.length > 0) {
+                                bestRow = [sectionPhotos[0]];
+                                bestRowTotalAspect = sectionPhotos[0].aspectRatio;
+                                const rowGapWidth = calculateGapWidth(1);
+                                const rowContainerWidth = containerWidth - rowGapWidth;
+                                bestRowHeight = rowContainerWidth / bestRowTotalAspect;
+                            }
+
+                            if (bestRow.length > 0) {
+                                const isLastRowInSection = bestRow.length === sectionPhotos.length;
+                                const rowGapWidth = calculateGapWidth(bestRow.length);
+                                const rowContainerWidth = containerWidth - rowGapWidth;
+                                let finalRowHeight = rowContainerWidth / bestRowTotalAspect;
+
+                                // Корректируем высоту для последнего ряда в секции
+                                if (isLastRowInSection && finalRowHeight > TARGET_ROW_HEIGHT * 1.2) {
+                                    finalRowHeight = TARGET_ROW_HEIGHT;
+                                }
+
+                                const finalRow = bestRow.map(img => ({
+                                    ...img,
+                                    height: finalRowHeight,
+                                    width: img.aspectRatio * finalRowHeight,
+                                }));
+
+                                rows.push({ type: 'photoRow', content: finalRow, uniqueId: rows.length });
+                                
+                                // Удаляем использованные фото из секции
+                                sectionPhotos = sectionPhotos.slice(bestRow.length);
+                            } else {
+                                break;
+                            }
+                        }
                     }
                     
                     return rows;
