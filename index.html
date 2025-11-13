@@ -1461,7 +1461,7 @@
                             const potentialAspect = currentRowTotalAspect + item.aspectRatio;
                             const rowCount = currentRow.length + 1;
                             const potentialRowHeight = (containerWidth - calculateGapWidth(rowCount)) / potentialAspect;
-                            const shouldStartNewRow = currentRow.length > 0 && potentialRowHeight < TARGET_ROW_HEIGHT * 1.0;
+                            const shouldStartNewRow = currentRow.length > 0 && potentialRowHeight < TARGET_ROW_HEIGHT * 0.8;
 
                             if (shouldStartNewRow) {
                                 finalizePhotoRow(currentRow);
