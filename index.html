@@ -1481,31 +1481,80 @@
                         const sectionPhotos = section.filter(item => item.type !== 'divider' && item.aspectRatio > 0 && item.url);
                         
                         if (sectionPhotos.length === 0) continue;
-                        
-                        let currentRow = [];
-                        let currentRowTotalAspect = 0;
-                        
-                        for (let i = 0; i < sectionPhotos.length; i++) {
-                            const photo = sectionPhotos[i];
-                            currentRow.push(photo);
-                            currentRowTotalAspect += photo.aspectRatio;
 
-                            const isLastPhotoInSection = i === sectionPhotos.length - 1;
+                        // УМНЫЙ АЛГОРИТМ РАСПРЕДЕЛЕНИЯ ФОТОГРАФИЙ
+                        // Сначала пробуем создать ряды с оптимальным количеством фото
+                        let bestRows = [];
+                        let bestScore = Infinity;
 
-                            if (isLastPhotoInSection) {
-                                finalizePhotoRow(currentRow, true);
-                            } else {
-                                const rowGapWidth = calculateGapWidth(currentRow.length);
-                                const rowContainerWidth = containerWidth - rowGapWidth;
-                                const currentRowHeight = rowContainerWidth / currentRowTotalAspect;
-
-                                if (currentRowHeight < TARGET_ROW_HEIGHT * 0.7 || currentRow.length >= 6) {
-                                    finalizePhotoRow(currentRow, false);
-                                    currentRow = [];
-                                    currentRowTotalAspect = 0;
+                        // Пробуем разные стратегии распределения
+                        for (let maxPhotosPerRow = 3; maxPhotosPerRow <= 6; maxPhotosPerRow++) {
+                            const currentRows = [];
+                            let currentRow = [];
+                            let currentRowTotalAspect = 0;
+                            
+                            for (let i = 0; i < sectionPhotos.length; i++) {
+                                const photo = sectionPhotos[i];
+                                const potentialAspect = currentRowTotalAspect + photo.aspectRatio;
+                                const potentialCount = currentRow.length + 1;
+                                const potentialGapWidth = calculateGapWidth(potentialCount);
+                                const potentialHeight = (containerWidth - potentialGapWidth) / potentialAspect;
+                                
+                                const shouldFinalizeRow = 
+                                    currentRow.length > 0 && 
+                                    (potentialHeight < TARGET_ROW_HEIGHT * 0.8 || 
+                                     potentialCount >= maxPhotosPerRow ||
+                                     i === sectionPhotos.length - 1);
+                                
+                                if (shouldFinalizeRow) {
+                                    currentRows.push([...currentRow]);
+                                    currentRow = [photo];
+                                    currentRowTotalAspect = photo.aspectRatio;
+                                } else {
+                                    currentRow.push(photo);
+                                    currentRowTotalAspect = potentialAspect;
                                 }
                             }
+                            
+                            if (currentRow.length > 0) {
+                                currentRows.push(currentRow);
+                            }
+
+                            // Оцениваем качество распределения
+                            let score = 0;
+                            for (const row of currentRows) {
+                                const rowGapWidth = calculateGapWidth(row.length);
+                                const rowContainerWidth = containerWidth - rowGapWidth;
+                                const totalAspect = row.reduce((sum, img) => sum + img.aspectRatio, 0);
+                                const rowHeight = rowContainerWidth / totalAspect;
+                                
+                                // Штрафуем за отклонение от целевой высоты
+                                score += Math.abs(rowHeight - TARGET_ROW_HEIGHT);
+                                
+                                // Штрафуем за ряды с 1-2 фото
+                                if (row.length <= 2) {
+                                    score += 100;
+                                }
+                                
+                                // Штрафуем за слишком высокие/низкие ряды
+                                if (rowHeight < TARGET_ROW_HEIGHT * 0.7 || rowHeight > TARGET_ROW_HEIGHT * 1.5) {
+                                    score += 50;
+                                }
+                            }
+                            
+                            // Предпочитаем распределения с меньшим количеством рядов
+                            score += currentRows.length * 10;
+                            
+                            if (score < bestScore) {
+                                bestScore = score;
+                                bestRows = currentRows;
+                            }
                         }
+
+                        // Финализируем лучшие ряды
+                        bestRows.forEach((row, index) => {
+                            finalizePhotoRow(row, index === bestRows.length - 1);
+                        });
                     }
                     
                     return rows;
