@@ -241,7 +241,7 @@
 
         const TARGET_ROW_HEIGHT = 300; 
         const GALLERY_GAP_PX = 2; 
-        const MAX_ROW_HEIGHT_MULTIPLIER = 1.3;
+        const MAX_ROW_HEIGHT_MULTIPLIER = 1.5; 
 
         // --- КОМПОНЕНТ: Модальное окно для увеличенного изображения ---
         const ImageModal = ({ image, onClose, onSaveCaption, albumId, onNext, onPrev, isAdmin }) => {
@@ -1415,99 +1415,70 @@
                     if (containerWidth <= 0) return [];
                     
                     const rows = [];
-                    const allPhotos = allContent.filter(item => item.type !== 'divider' && item.url);
-                    
-                    if (allPhotos.length === 0) return [];
-
                     let currentRow = [];
-                    let currentRowWidth = 0;
+                    let currentRowTotalAspect = 0;
                     
-                    for (let i = 0; i < allPhotos.length; i++) {
-                        const photo = allPhotos[i];
-                        const photoWidth = TARGET_ROW_HEIGHT * photo.aspectRatio;
+                    const calculateGapWidth = (count) => (count - 1) * GALLERY_GAP_PX;
+
+                    const finalizePhotoRow = (row, isLastRow = false) => {
+                        if (row.length === 0) return;
+
+                        const rowGapWidth = calculateGapWidth(row.length);
+                        const rowContainerWidth = containerWidth - rowGapWidth;
+                        const totalAspect = row.reduce((sum, img) => sum + img.aspectRatio, 0);
+
+                        let finalRowHeight = rowContainerWidth / totalAspect;
                         
-                        if (currentRow.length === 0) {
-                            // Первое фото в ряду
-                            currentRow.push(photo);
-                            currentRowWidth += photoWidth;
+                        if (!isLastRow) {
+                            const maxHeight = TARGET_ROW_HEIGHT * MAX_ROW_HEIGHT_MULTIPLIER;
+                            if (finalRowHeight > maxHeight) {
+                                finalRowHeight = maxHeight;
+                            }
                         } else {
-                            // Проверяем, поместится ли фото в текущий ряд
-                            const newRowWidth = currentRowWidth + photoWidth + GALLERY_GAP_PX;
-                            
-                            if (newRowWidth <= containerWidth || currentRow.length >= 6) {
-                                // Фото помещается или достигнут максимум в ряду
-                                currentRow.push(photo);
-                                currentRowWidth = newRowWidth;
-                            } else {
-                                // Завершаем текущий ряд и начинаем новый
-                                finalizeRow(currentRow, containerWidth, rows);
-                                currentRow = [photo];
-                                currentRowWidth = photoWidth;
+                            if (finalRowHeight > TARGET_ROW_HEIGHT * 1.2) {
+                                finalRowHeight = TARGET_ROW_HEIGHT;
                             }
                         }
                         
-                        // Если это последнее фото, завершаем ряд
-                        if (i === allPhotos.length - 1 && currentRow.length > 0) {
-                            finalizeRow(currentRow, containerWidth, rows);
-                        }
-                    }
-
-                    // Функция для завершения ряда и расчета финальных размеров
-                    function finalizeRow(row, containerWidth, rowsArray) {
-                        const rowGapWidth = (row.length - 1) * GALLERY_GAP_PX;
-                        const availableWidth = containerWidth - rowGapWidth;
-                        const totalAspect = row.reduce((sum, img) => sum + img.aspectRatio, 0);
-                        
-                        let rowHeight = availableWidth / totalAspect;
-                        
-                        // Ограничиваем высоту ряда
-                        const maxHeight = TARGET_ROW_HEIGHT * MAX_ROW_HEIGHT_MULTIPLIER;
-                        const minHeight = TARGET_ROW_HEIGHT * 0.7;
-                        
-                        if (rowHeight > maxHeight) {
-                            rowHeight = maxHeight;
-                        } else if (rowHeight < minHeight) {
-                            rowHeight = minHeight;
-                        }
-                        
-                        const finalizedRow = row.map(img => ({
+                        const finalRow = row.map(img => ({
                             ...img,
-                            height: rowHeight,
-                            width: img.aspectRatio * rowHeight,
+                            height: finalRowHeight,
+                            width: img.aspectRatio * finalRowHeight,
                         }));
                         
-                        rowsArray.push({ 
-                            type: 'photoRow', 
-                            content: finalizedRow, 
-                            uniqueId: Date.now() + Math.random() 
-                        });
-                    }
+                        rows.push({ type: 'photoRow', content: finalRow, uniqueId: rows.length });
+                    };
 
-                    // Добавляем разделители обратно
-                    const finalRows = [];
-                    let photoIndex = 0;
-                    
-                    allContent.forEach(item => {
+                    for (const item of allContent) {
                         if (item.type === 'divider') {
-                            finalRows.push({ 
-                                type: 'dividerRow', 
-                                content: item, 
-                                uniqueId: item.timestamp 
-                            });
-                        } else {
-                            // Находим ряд, содержащий это фото
-                            const row = rows.find(r => 
-                                r.type === 'photoRow' && 
-                                r.content.some(img => img.timestamp === item.timestamp)
-                            );
-                            
-                            if (row && !finalRows.some(r => r.uniqueId === row.uniqueId)) {
-                                finalRows.push(row);
+                            if (currentRow.length > 0) {
+                                finalizePhotoRow(currentRow);
+                                currentRow = [];
+                                currentRowTotalAspect = 0;
+                            }
+                            rows.push({ type: 'dividerRow', content: item, uniqueId: item.timestamp });
+                        } else if (item.aspectRatio > 0 && item.url) {
+                            const potentialAspect = currentRowTotalAspect + item.aspectRatio;
+                            const rowCount = currentRow.length + 1;
+                            const potentialRowHeight = (containerWidth - calculateGapWidth(rowCount)) / potentialAspect;
+                            const shouldStartNewRow = currentRow.length > 0 && potentialRowHeight < TARGET_ROW_HEIGHT * 0.95;
+
+                            if (shouldStartNewRow) {
+                                finalizePhotoRow(currentRow);
+                                currentRow = [item];
+                                currentRowTotalAspect = item.aspectRatio;
+                            } else {
+                                currentRow.push(item);
+                                currentRowTotalAspect = potentialAspect;
                             }
                         }
-                    });
-
-                    return finalRows;
+                    }
+                    
+                    if (currentRow.length > 0) {
+                        finalizePhotoRow(currentRow, true);
+                    }
+                    
+                    return rows;
                 }, [allContent, containerWidth]);
 
                 const isDraggingCurrent = (uniqueId) => isReorderMode && dragItemUniqueId.current === uniqueId;
