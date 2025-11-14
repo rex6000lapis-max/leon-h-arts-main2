@@ -1418,77 +1418,158 @@
                     
                     const calculateGapWidth = (count) => (count - 1) * GALLERY_GAP_PX;
 
-                    // Улучшенная функция для оптимального распределения фото
+                    // УЛУЧШЕННАЯ функция для оптимального распределения фото
                     const distributePhotosOptimally = (photos, targetHeight, containerWidth) => {
                         if (photos.length === 0) return [];
                         
                         const rows = [];
-                        let startIndex = 0;
-                        
-                        while (startIndex < photos.length) {
-                            let bestRow = [photos[startIndex]];
-                            let bestCost = calculateRowCost(bestRow, targetHeight, containerWidth);
+                        const calculateGapWidth = (count) => (count - 1) * GALLERY_GAP_PX;
+
+                        // Улучшенная функция для оптимального распределения фото
+                        const distributePhotos = (photos, targetHeight, containerWidth) => {
+                            if (photos.length === 0) return [];
                             
-                            // Пробуем добавлять фото в ряд, пока это улучшает результат
-                            for (let endIndex = startIndex + 1; endIndex <= Math.min(startIndex + 10, photos.length); endIndex++) {
-                                const candidateRow = photos.slice(startIndex, endIndex + 1);
-                                const candidateCost = calculateRowCost(candidateRow, targetHeight, containerWidth);
+                            const rows = [];
+                            let startIndex = 0;
+                            
+                            while (startIndex < photos.length) {
+                                let bestRow = [photos[startIndex]];
+                                let bestCost = calculateRowCost(bestRow, targetHeight, containerWidth);
                                 
-                                // Если добавление фото улучшает ряд ИЛИ это последний ряд и мы близки к концу
-                                if (candidateCost < bestCost || 
-                                    (endIndex === photos.length - 1 && candidateCost < bestCost + 0.3)) {
-                                    bestRow = candidateRow;
-                                    bestCost = candidateCost;
-                                } else {
-                                    // Если добавление ухудшает ряд значительно, останавливаемся
-                                    break;
+                                // Пробуем добавлять фото в ряд, пока это улучшает результат
+                                for (let endIndex = startIndex + 1; endIndex <= Math.min(startIndex + 10, photos.length); endIndex++) {
+                                    const candidateRow = photos.slice(startIndex, endIndex + 1);
+                                    const candidateCost = calculateRowCost(candidateRow, targetHeight, containerWidth);
+                                    
+                                    // Если добавление фото улучшает ряд ИЛИ это последний ряд и мы близки к концу
+                                    if (candidateCost < bestCost || 
+                                        (endIndex === photos.length - 1 && candidateCost < bestCost + 0.3)) {
+                                        bestRow = candidateRow;
+                                        bestCost = candidateCost;
+                                    } else {
+                                        // Если добавление ухудшает ряд значительно, останавливаемся
+                                        break;
+                                    }
                                 }
+                                
+                                // Рассчитываем финальную высоту для выбранного ряда
+                                const totalAspect = bestRow.reduce((sum, img) => sum + img.aspectRatio, 0);
+                                const gapWidth = calculateGapWidth(bestRow.length);
+                                const finalHeight = Math.min(
+                                    (containerWidth - gapWidth) / totalAspect,
+                                    TARGET_ROW_HEIGHT * MAX_ROW_HEIGHT_MULTIPLIER
+                                );
+                                
+                                // Убедимся, что высота не слишком маленькая (кроме последнего ряда)
+                                const minAllowedHeight = startIndex + bestRow.length >= photos.length ? 
+                                    TARGET_ROW_HEIGHT * 0.5 : // Для последнего ряда допускаем меньшую высоту
+                                    TARGET_ROW_HEIGHT * 0.7;  // Для остальных рядов минимальная высота
+                                
+                                const clampedHeight = Math.max(finalHeight, minAllowedHeight);
+                                
+                                rows.push({
+                                    photos: bestRow,
+                                    height: clampedHeight
+                                });
+                                
+                                startIndex += bestRow.length;
                             }
                             
-                            // Рассчитываем финальную высоту для выбранного ряда
-                            const totalAspect = bestRow.reduce((sum, img) => sum + img.aspectRatio, 0);
-                            const gapWidth = calculateGapWidth(bestRow.length);
-                            const finalHeight = Math.min(
-                                (containerWidth - gapWidth) / totalAspect,
-                                TARGET_ROW_HEIGHT * MAX_ROW_HEIGHT_MULTIPLIER
-                            );
+                            return rows;
+                        };
+
+                        // Функция для расчета "стоимости" ряда - насколько он далек от идеала
+                        const calculateRowCost = (rowPhotos, targetHeight, containerWidth) => {
+                            if (rowPhotos.length === 0) return Infinity;
                             
-                            // Убедимся, что высота не слишком маленькая (кроме последнего ряда)
-                            const minAllowedHeight = startIndex + bestRow.length >= photos.length ? 
-                                TARGET_ROW_HEIGHT * 0.5 : // Для последнего ряда допускаем меньшую высоту
-                                TARGET_ROW_HEIGHT * 0.7;  // Для остальных рядов минимальная высота
+                            const totalAspect = rowPhotos.reduce((sum, img) => sum + img.aspectRatio, 0);
+                            const gapWidth = calculateGapWidth(rowPhotos.length);
+                            const actualHeight = (containerWidth - gapWidth) / totalAspect;
                             
-                            const clampedHeight = Math.max(finalHeight, minAllowedHeight);
+                            // Штрафуем за отклонение от целевой высоты
+                            const heightDiff = Math.abs(actualHeight - targetHeight) / targetHeight;
                             
-                            rows.push({
-                                photos: bestRow,
-                                height: clampedHeight
-                            });
+                            // Штрафуем за слишком малое количество фото в ряду (кроме последнего ряда)
+                            const countPenalty = rowPhotos.length < 2 ? 0.5 : 0;
                             
-                            startIndex += bestRow.length;
+                            // Штрафуем за слишком большое отклонение высоты
+                            const extremeHeightPenalty = actualHeight > targetHeight * 2 ? 1 : 0;
+                            
+                            return heightDiff + countPenalty + extremeHeightPenalty;
+                        };
+
+                        // Вспомогательная функция для проверки, является ли ряд "неполным"
+                        const isRowUnderfilled = (row, containerWidth, threshold = 0.6) => {
+                            const totalRowWidth = row.photos.reduce((sum, img) => sum + img.aspectRatio * row.height, 0);
+                            return totalRowWidth < containerWidth * threshold;
+                        };
+
+                        // НОВАЯ ЛОГИКА: Оптимизация последнего ряда в секции
+                        const optimizedDistribution = distributePhotos(photos, targetHeight, containerWidth);
+                        
+                        // Если есть хотя бы 2 ряда, проверяем и оптимизируем последний ряд
+                        if (optimizedDistribution.length >= 2) {
+                            const lastRow = optimizedDistribution[optimizedDistribution.length - 1];
+                            const secondLastRow = optimizedDistribution[optimizedDistribution.length - 2];
+                            
+                            // Проверяем, не слишком ли мало фото в последнем ряду
+                            if (lastRow.photos.length <= 2 && secondLastRow.photos.length > 2) {
+                                // Пробуем перераспределить фото из предпоследнего ряда в последний
+                                const photosFromSecondLast = [...secondLastRow.photos];
+                                const photosToMove = [];
+                                
+                                // Берем 1-2 фото из конца предпоследнего ряда
+                                const numToMove = Math.min(2, photosFromSecondLast.length - 2); // Оставляем минимум 2 фото в предпоследнем ряду
+                                
+                                for (let i = 0; i < numToMove; i++) {
+                                    photosToMove.push(photosFromSecondLast.pop());
+                                }
+                                
+                                if (photosToMove.length > 0) {
+                                    // Создаем новый последний ряд с добавленными фото
+                                    const newLastRowPhotos = [...photosToMove.reverse(), ...lastRow.photos];
+                                    
+                                    // Пересчитываем высоты для обоих рядов
+                                    const secondLastAspect = photosFromSecondLast.reduce((sum, img) => sum + img.aspectRatio, 0);
+                                    const lastAspect = newLastRowPhotos.reduce((sum, img) => sum + img.aspectRatio, 0);
+                                    
+                                    const secondLastGap = calculateGapWidth(photosFromSecondLast.length);
+                                    const lastGap = calculateGapWidth(newLastRowPhotos.length);
+                                    
+                                    const newSecondLastHeight = Math.min(
+                                        (containerWidth - secondLastGap) / secondLastAspect,
+                                        TARGET_ROW_HEIGHT * MAX_ROW_HEIGHT_MULTIPLIER
+                                    );
+                                    
+                                    const newLastHeight = Math.min(
+                                        (containerWidth - lastGap) / lastAspect,
+                                        TARGET_ROW_HEIGHT * MAX_ROW_HEIGHT_MULTIPLIER
+                                    );
+                                    
+                                    // Проверяем, улучшилась ли ситуация (последний ряд стал более заполненным)
+                                    const originalLastRowWidth = lastRow.photos.reduce((sum, img) => sum + img.aspectRatio * lastRow.height, 0);
+                                    const newLastRowWidth = newLastRowPhotos.reduce((sum, img) => sum + img.aspectRatio * newLastHeight, 0);
+                                    
+                                    // Если новый последний ряд заполняет более 70% ширины, применяем изменения
+                                    if (newLastRowWidth > originalLastRowWidth * 1.2 || 
+                                        (newLastRowWidth / containerWidth) > 0.7) {
+                                        
+                                        // Обновляем ряды
+                                        optimizedDistribution[optimizedDistribution.length - 2] = {
+                                            photos: photosFromSecondLast,
+                                            height: Math.max(newSecondLastHeight, TARGET_ROW_HEIGHT * 0.7)
+                                        };
+                                        
+                                        optimizedDistribution[optimizedDistribution.length - 1] = {
+                                            photos: newLastRowPhotos,
+                                            height: Math.max(newLastHeight, TARGET_ROW_HEIGHT * 0.5)
+                                        };
+                                    }
+                                }
+                            }
                         }
                         
-                        return rows;
-                    };
-
-                    // Функция для расчета "стоимости" ряда - насколько он далек от идеала
-                    const calculateRowCost = (rowPhotos, targetHeight, containerWidth) => {
-                        if (rowPhotos.length === 0) return Infinity;
-                        
-                        const totalAspect = rowPhotos.reduce((sum, img) => sum + img.aspectRatio, 0);
-                        const gapWidth = calculateGapWidth(rowPhotos.length);
-                        const actualHeight = (containerWidth - gapWidth) / totalAspect;
-                        
-                        // Штрафуем за отклонение от целевой высоты
-                        const heightDiff = Math.abs(actualHeight - targetHeight) / targetHeight;
-                        
-                        // Штрафуем за слишком малое количество фото в ряду (кроме последнего ряда)
-                        const countPenalty = rowPhotos.length < 2 ? 0.5 : 0;
-                        
-                        // Штрафуем за слишком большое отклонение высоты
-                        const extremeHeightPenalty = actualHeight > targetHeight * 2 ? 1 : 0;
-                        
-                        return heightDiff + countPenalty + extremeHeightPenalty;
+                        return optimizedDistribution;
                     };
 
                     // Сначала группируем контент по разделам
