@@ -1418,142 +1418,77 @@
                     
                     const calculateGapWidth = (count) => (count - 1) * GALLERY_GAP_PX;
 
-                    // Функция для вычисления высоты ряда
-                    const calculateRowHeight = (photos, isLastRow = false) => {
-                        if (photos.length === 0) return TARGET_ROW_HEIGHT;
+                    // Улучшенная функция для оптимального распределения фото
+                    const distributePhotosOptimally = (photos, targetHeight, containerWidth) => {
+                        if (photos.length === 0) return [];
                         
-                        const rowGapWidth = calculateGapWidth(photos.length);
-                        const rowContainerWidth = containerWidth - rowGapWidth;
-                        const totalAspect = photos.reduce((sum, img) => sum + img.aspectRatio, 0);
+                        const rows = [];
+                        let startIndex = 0;
                         
-                        let height = rowContainerWidth / totalAspect;
-                        
-                        // Границы высоты ряда
-                        const minHeight = TARGET_ROW_HEIGHT * 0.7;
-                        const maxHeight = TARGET_ROW_HEIGHT * MAX_ROW_HEIGHT_MULTIPLIER;
-                        
-                        // Для последнего ряда допускаем немного меньшую высоту
-                        if (isLastRow) {
-                            return Math.max(minHeight * 0.9, Math.min(height, maxHeight));
+                        while (startIndex < photos.length) {
+                            let bestRow = [photos[startIndex]];
+                            let bestCost = calculateRowCost(bestRow, targetHeight, containerWidth);
+                            
+                            // Пробуем добавлять фото в ряд, пока это улучшает результат
+                            for (let endIndex = startIndex + 1; endIndex <= Math.min(startIndex + 10, photos.length); endIndex++) {
+                                const candidateRow = photos.slice(startIndex, endIndex + 1);
+                                const candidateCost = calculateRowCost(candidateRow, targetHeight, containerWidth);
+                                
+                                // Если добавление фото улучшает ряд ИЛИ это последний ряд и мы близки к концу
+                                if (candidateCost < bestCost || 
+                                    (endIndex === photos.length - 1 && candidateCost < bestCost + 0.3)) {
+                                    bestRow = candidateRow;
+                                    bestCost = candidateCost;
+                                } else {
+                                    // Если добавление ухудшает ряд значительно, останавливаемся
+                                    break;
+                                }
+                            }
+                            
+                            // Рассчитываем финальную высоту для выбранного ряда
+                            const totalAspect = bestRow.reduce((sum, img) => sum + img.aspectRatio, 0);
+                            const gapWidth = calculateGapWidth(bestRow.length);
+                            const finalHeight = Math.min(
+                                (containerWidth - gapWidth) / totalAspect,
+                                TARGET_ROW_HEIGHT * MAX_ROW_HEIGHT_MULTIPLIER
+                            );
+                            
+                            // Убедимся, что высота не слишком маленькая (кроме последнего ряда)
+                            const minAllowedHeight = startIndex + bestRow.length >= photos.length ? 
+                                TARGET_ROW_HEIGHT * 0.5 : // Для последнего ряда допускаем меньшую высоту
+                                TARGET_ROW_HEIGHT * 0.7;  // Для остальных рядов минимальная высота
+                            
+                            const clampedHeight = Math.max(finalHeight, minAllowedHeight);
+                            
+                            rows.push({
+                                photos: bestRow,
+                                height: clampedHeight
+                            });
+                            
+                            startIndex += bestRow.length;
                         }
                         
-                        return Math.max(minHeight, Math.min(height, maxHeight));
+                        return rows;
                     };
 
-                    // Функция для перераспределения фотографий между рядами
-                    const redistributePhotos = (sectionPhotos) => {
-                        if (sectionPhotos.length === 0) return [];
+                    // Функция для расчета "стоимости" ряда - насколько он далек от идеала
+                    const calculateRowCost = (rowPhotos, targetHeight, containerWidth) => {
+                        if (rowPhotos.length === 0) return Infinity;
                         
-                        const resultRows = [];
-                        let currentRow = [];
-                        let currentRowTotalAspect = 0;
+                        const totalAspect = rowPhotos.reduce((sum, img) => sum + img.aspectRatio, 0);
+                        const gapWidth = calculateGapWidth(rowPhotos.length);
+                        const actualHeight = (containerWidth - gapWidth) / totalAspect;
                         
-                        // Сначала формируем ряды как обычно
-                        for (let i = 0; i < sectionPhotos.length; i++) {
-                            const photo = sectionPhotos[i];
-                            const potentialAspect = currentRowTotalAspect + photo.aspectRatio;
-                            const potentialCount = currentRow.length + 1;
-                            const potentialGapWidth = calculateGapWidth(potentialCount);
-                            const potentialHeight = (containerWidth - potentialGapWidth) / potentialAspect;
-                            
-                            // Проверяем, нужно ли завершить текущий ряд
-                            const shouldFinalizeRow = 
-                                currentRow.length > 0 && 
-                                (potentialHeight < TARGET_ROW_HEIGHT * 0.7 || 
-                                 potentialCount > 6);
-                            
-                            if (shouldFinalizeRow) {
-                                resultRows.push([...currentRow]);
-                                currentRow = [photo];
-                                currentRowTotalAspect = photo.aspectRatio;
-                            } else {
-                                currentRow.push(photo);
-                                currentRowTotalAspect = potentialAspect;
-                            }
-                        }
+                        // Штрафуем за отклонение от целевой высоты
+                        const heightDiff = Math.abs(actualHeight - targetHeight) / targetHeight;
                         
-                        if (currentRow.length > 0) {
-                            resultRows.push(currentRow);
-                        }
+                        // Штрафуем за слишком малое количество фото в ряду (кроме последнего ряда)
+                        const countPenalty = rowPhotos.length < 2 ? 0.5 : 0;
                         
-                        // Оптимизация: перераспределяем фотографии между рядами
-                        let optimized = false;
-                        let maxIterations = resultRows.length * 2; // Защита от бесконечного цикла
+                        // Штрафуем за слишком большое отклонение высоты
+                        const extremeHeightPenalty = actualHeight > targetHeight * 2 ? 1 : 0;
                         
-                        while (!optimized && maxIterations > 0) {
-                            optimized = true;
-                            maxIterations--;
-                            
-                            // Проходим по всем рядам кроме последнего
-                            for (let i = 0; i < resultRows.length - 1; i++) {
-                                const currentRow = resultRows[i];
-                                const nextRow = resultRows[i + 1];
-                                
-                                if (!currentRow || !nextRow || currentRow.length === 0 || nextRow.length === 0) continue;
-                                
-                                // Вычисляем текущие высоты рядов
-                                const currentHeight = calculateRowHeight(currentRow, false);
-                                const nextHeight = calculateRowHeight(nextRow, i === resultRows.length - 2);
-                                
-                                // Пытаемся переместить последнюю фотографию из текущего ряда в следующий
-                                if (currentRow.length > 1) {
-                                    const photoToMove = currentRow[currentRow.length - 1];
-                                    const newCurrentRow = currentRow.slice(0, -1);
-                                    const newNextRow = [photoToMove, ...nextRow];
-                                    
-                                    const newCurrentHeight = calculateRowHeight(newCurrentRow, false);
-                                    const newNextHeight = calculateRowHeight(newNextRow, i === resultRows.length - 2);
-                                    
-                                    // Проверяем, улучшилась ли ситуация
-                                    const currentDiff = Math.abs(currentHeight - TARGET_ROW_HEIGHT) + Math.abs(nextHeight - TARGET_ROW_HEIGHT);
-                                    const newDiff = Math.abs(newCurrentHeight - TARGET_ROW_HEIGHT) + Math.abs(newNextHeight - TARGET_ROW_HEIGHT);
-                                    
-                                    // Также проверяем, что ряды остаются в допустимых границах
-                                    const isValidRedistribution = 
-                                        newCurrentHeight >= TARGET_ROW_HEIGHT * 0.7 &&
-                                        newCurrentHeight <= TARGET_ROW_HEIGHT * MAX_ROW_HEIGHT_MULTIPLIER &&
-                                        newNextHeight >= TARGET_ROW_HEIGHT * 0.65 &&
-                                        newNextHeight <= TARGET_ROW_HEIGHT * MAX_ROW_HEIGHT_MULTIPLIER;
-                                    
-                                    if (newDiff < currentDiff && isValidRedistribution) {
-                                        resultRows[i] = newCurrentRow;
-                                        resultRows[i + 1] = newNextRow;
-                                        optimized = false;
-                                        break; // Начинаем проверку заново
-                                    }
-                                }
-                                
-                                // Пытаемся переместить первую фотографию из следующего ряда в текущий
-                                if (nextRow.length > 1) {
-                                    const photoToMove = nextRow[0];
-                                    const newCurrentRow = [...currentRow, photoToMove];
-                                    const newNextRow = nextRow.slice(1);
-                                    
-                                    const newCurrentHeight = calculateRowHeight(newCurrentRow, false);
-                                    const newNextHeight = calculateRowHeight(newNextRow, i === resultRows.length - 2);
-                                    
-                                    // Проверяем, улучшилась ли ситуация
-                                    const currentDiff = Math.abs(currentHeight - TARGET_ROW_HEIGHT) + Math.abs(nextHeight - TARGET_ROW_HEIGHT);
-                                    const newDiff = Math.abs(newCurrentHeight - TARGET_ROW_HEIGHT) + Math.abs(newNextHeight - TARGET_ROW_HEIGHT);
-                                    
-                                    // Также проверяем, что ряды остаются в допустимых границах
-                                    const isValidRedistribution = 
-                                        newCurrentHeight >= TARGET_ROW_HEIGHT * 0.7 &&
-                                        newCurrentHeight <= TARGET_ROW_HEIGHT * MAX_ROW_HEIGHT_MULTIPLIER &&
-                                        newNextHeight >= TARGET_ROW_HEIGHT * 0.65 &&
-                                        newNextHeight <= TARGET_ROW_HEIGHT * MAX_ROW_HEIGHT_MULTIPLIER;
-                                    
-                                    if (newDiff < currentDiff && isValidRedistribution) {
-                                        resultRows[i] = newCurrentRow;
-                                        resultRows[i + 1] = newNextRow;
-                                        optimized = false;
-                                        break; // Начинаем проверку заново
-                                    }
-                                }
-                            }
-                        }
-                        
-                        return resultRows;
+                        return heightDiff + countPenalty + extremeHeightPenalty;
                     };
 
                     // Сначала группируем контент по разделам
@@ -1563,47 +1498,56 @@
                     for (const item of allContent) {
                         if (item.type === 'divider') {
                             if (currentSection.length > 0) {
-                                sections.push(currentSection);
+                                sections.push({ type: 'photos', items: currentSection });
                                 currentSection = [];
                             }
-                            sections.push([item]);
+                            sections.push({ type: 'divider', item: item });
                         } else {
                             currentSection.push(item);
                         }
                     }
                     if (currentSection.length > 0) {
-                        sections.push(currentSection);
+                        sections.push({ type: 'photos', items: currentSection });
                     }
 
                     // Обрабатываем каждую секцию отдельно
                     for (const section of sections) {
-                        if (section.length === 1 && section[0].type === 'divider') {
+                        if (section.type === 'divider') {
                             // Добавляем разделитель
-                            rows.push({ type: 'dividerRow', content: section[0], uniqueId: section[0].timestamp });
+                            rows.push({ 
+                                type: 'dividerRow', 
+                                content: section.item, 
+                                uniqueId: section.item.timestamp 
+                            });
                             continue;
                         }
 
-                        // Обрабатываем фото в секции
-                        const sectionPhotos = section.filter(item => item.type !== 'divider' && item.aspectRatio > 0 && item.url);
+                        // Для секции с фото используем оптимизированное распределение
+                        const sectionPhotos = section.items.filter(item => 
+                            item.type !== 'divider' && item.aspectRatio > 0 && item.url
+                        );
                         
                         if (sectionPhotos.length === 0) continue;
                         
-                        // Используем улучшенный алгоритм распределения
-                        const optimizedRows = redistributePhotos(sectionPhotos);
+                        const photoRows = distributePhotosOptimally(
+                            sectionPhotos, 
+                            TARGET_ROW_HEIGHT, 
+                            containerWidth
+                        );
                         
-                        // Преобразуем в формат для отображения
-                        for (let i = 0; i < optimizedRows.length; i++) {
-                            const row = optimizedRows[i];
-                            const isLastRow = i === optimizedRows.length - 1;
-                            const rowHeight = calculateRowHeight(row, isLastRow);
-                            
-                            const finalRow = row.map(img => ({
-                                ...img,
-                                height: rowHeight,
-                                width: img.aspectRatio * rowHeight,
+                        // Преобразуем ряды в нужный формат
+                        for (const row of photoRows) {
+                            const rowContent = row.photos.map(photo => ({
+                                ...photo,
+                                height: row.height,
+                                width: photo.aspectRatio * row.height,
                             }));
                             
-                            rows.push({ type: 'photoRow', content: finalRow, uniqueId: Date.now() + Math.random() });
+                            rows.push({ 
+                                type: 'photoRow', 
+                                content: rowContent, 
+                                uniqueId: Date.now() + Math.random() 
+                            });
                         }
                     }
                     
