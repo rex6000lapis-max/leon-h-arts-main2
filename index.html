@@ -1498,8 +1498,8 @@
                                     rows.pop();
                                 }
                             }
-                            // СЛУЧАЙ 2: Если в последнем ряду 3 фото и они заполняют меньше 80% ширины
-                            else if (lastRow.photos.length === 3 && lastRowFillRatio < 0.8) {
+                            // СЛУЧАЙ 2: Если в последнем ряду 3 фото и они заполняют меньше 90% ширины
+                            else if (lastRow.photos.length === 3 && lastRowFillRatio < 0.9) {
                                 // Ищем оптимальное количество фото для перемещения
                                 let bestMoveCount = 0;
                                 let bestCost = Infinity;
@@ -1576,7 +1576,7 @@
                                 }
                             }
                             // СЛУЧАЙ 3: Если в последнем ряду больше 3 фото, но все равно мало заполнен
-                            else if (lastRow.photos.length > 3 && lastRowFillRatio < 0.7 && secondLastRow.photos.length >= 5) {
+                            else if (lastRow.photos.length > 3 && lastRowFillRatio < 0.8 && secondLastRow.photos.length >= 5) {
                                 // Пробуем переместить одно фото из предпоследнего ряда
                                 const newSecondLastPhotos = secondLastRow.photos.slice(0, -1);
                                 const newLastPhotos = [...secondLastRow.photos.slice(-1), ...lastRow.photos];
@@ -1614,6 +1614,26 @@
                                         photos: newLastPhotos,
                                         height: newLastHeight
                                     };
+                                }
+                            }
+                        }
+
+                        // === НОВЫЙ ЭТАП: Увеличиваем ряды, которые почти заполнены (>=90%) до 100% ===
+                        for (let i = 0; i < rows.length; i++) {
+                            const row = rows[i];
+                            const totalAspect = row.photos.reduce((sum, img) => sum + img.aspectRatio, 0);
+                            const gapWidth = calculateGapWidth(row.photos.length);
+                            const currentWidth = totalAspect * row.height + gapWidth;
+                            const fillRatio = currentWidth / containerWidth;
+
+                            // Если ряд заполнен более чем на 90% но менее 100%, увеличиваем его до 100%
+                            if (fillRatio >= 0.9 && fillRatio < 1.0) {
+                                const desiredHeight = (containerWidth - gapWidth) / totalAspect;
+                                // Ограничиваем максимальной высотой
+                                const newHeight = Math.min(desiredHeight, TARGET_ROW_HEIGHT * MAX_ROW_HEIGHT_MULTIPLIER);
+                                // Если новая высота не меньше текущей (увеличиваем) и при этом не превышает максимальную, то применяем
+                                if (newHeight >= row.height) {
+                                    row.height = newHeight;
                                 }
                             }
                         }
