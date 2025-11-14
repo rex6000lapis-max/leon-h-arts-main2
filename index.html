@@ -1576,7 +1576,7 @@
                                 }
                             }
                             // СЛУЧАЙ 3: Если в последнем ряду больше 3 фото, но все равно мало заполнен
-                            else if (lastRow.photos.length > 3 && lastRowFillRatio < 0.8 && secondLastRow.photos.length >= 4) {
+                            else if (lastRow.photos.length > 3 && lastRowFillRatio < 0.9 && secondLastRow.photos.length >= 3) {
                                 // Пробуем переместить одно фото из предпоследнего ряда
                                 const newSecondLastPhotos = secondLastRow.photos.slice(0, -1);
                                 const newLastPhotos = [...secondLastRow.photos.slice(-1), ...lastRow.photos];
