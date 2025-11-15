@@ -1303,7 +1303,7 @@
                     const img = new Image();
                     img.onload = () => {
                         if (img.naturalWidth && img.naturalHeight) {
-                            const ratio = (img.naturalWidth / img.naturalHeight).toFixed(2);
+                            const ratio = (img.naturalWidth / img.naturalHeight).toFixed(3);
                             setAspectRatio(ratio);
                             console.log(`Авто-пропорции определены: ${ratio}`);
                         }
