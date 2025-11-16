@@ -1468,7 +1468,7 @@
                         }
                         
                         // === УЛУЧШЕННАЯ ПОСТ-ОБРАБОТКА: Оптимизация последних рядов ===
-                        if (rows.length >= 2) {
+                        if (rows.length >= 3) {
                             const lastRow = rows[rows.length - 1];
                             const secondLastRow = rows[rows.length - 2];
                             
@@ -1499,8 +1499,8 @@
                                     rows.pop();
                                 }
                             }
-                            // СЛУЧАЙ 2: Если в последнем ряду 4-5 фото и они заполняют меньше 85% ширины
-                            else if (lastRow.photos.length >= 3 && lastRow.photos.length <= 4 && lastRowFillRatio < 0.9) {
+                            // СЛУЧАЙ 2: Если в последнем ряду 3-4 фото и они заполняют меньше 85% ширины
+                            else if (lastRow.photos.length >= 3 && lastRow.photos.length <= 4 && lastRowFillRatio < 0.95) {
                                 // Пробуем переместить 1-2 фото из предпоследнего ряда в последний
                                 let bestMoveCount = 0;
                                 let bestCost = Infinity;
@@ -1576,7 +1576,7 @@
                                 }
                             }
                             // СЛУЧАЙ 3: Если в последнем ряду больше 5 фото, но заполнение меньше 80%
-                            else if (lastRow.photos.length > 5 && lastRowFillRatio < 0.80 && secondLastRow.photos.length >= 3) {
+                            else if (lastRow.photos.length > 3 && lastRowFillRatio < 1.0 && secondLastRow.photos.length >= 3) {
                                 // Пробуем переместить одно фото из предпоследнего ряда
                                 const newSecondLastPhotos = secondLastRow.photos.slice(0, -1);
                                 const newLastPhotos = [...secondLastRow.photos.slice(-1), ...lastRow.photos];
@@ -1627,12 +1627,12 @@
                             const fillRatio = currentWidth / containerWidth;
 
                             // ЕСЛИ ПОСЛЕДНИЙ РЯД ЗАПОЛНЕН МЕНЕЕ ЧЕМ НА 95%, ПЫТАЕМСЯ РАСТЯНУТЬ ЕГО
-                            if (fillRatio <= 0.90) {
+                            if (fillRatio <= 0.95) {
                                 const desiredHeight = (containerWidth - gapWidth) / totalAspect;
                                 // Разрешаем последнему ряду быть выше, если это улучшает заполнение
                                 const maxAllowedHeight = TARGET_ROW_HEIGHT * (MAX_ROW_HEIGHT_MULTIPLIER + 0.4);
                                 
-                                if (desiredHeight <= maxAllowedHeight && desiredHeight >= TARGET_ROW_HEIGHT * 0.4) {
+                                if (desiredHeight <= maxAllowedHeight && desiredHeight >= TARGET_ROW_HEIGHT * 0.3) {
                                     lastRow.height = desiredHeight;
                                 }
                             }
