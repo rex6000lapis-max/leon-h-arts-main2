@@ -241,7 +241,7 @@
 
         const TARGET_ROW_HEIGHT = 300; 
         const GALLERY_GAP_PX = 2; 
-        const MAX_ROW_HEIGHT_MULTIPLIER = 1.8; // Увеличено с 1.5 до 1.8
+        const MAX_ROW_HEIGHT_MULTIPLIER = 1.5; // Возвращаем к 1.5
 
         // --- КОМПОНЕНТ: Модальное окно для увеличенного изображения ---
         const ImageModal = ({ image, onClose, onSaveCaption, albumId, onNext, onPrev, isAdmin }) => {
@@ -1424,15 +1424,15 @@
                         
                         const rows = [];
                         
-                        // Основной алгоритм распределения
+                        // Основной алгоритм распределения (более консервативный)
                         let startIndex = 0;
                         
                         while (startIndex < photos.length) {
                             let bestRow = [photos[startIndex]];
                             let bestCost = calculateRowCost(bestRow, targetHeight, containerWidth);
                             
-                            // Пробуем добавлять фото в ряд (увеличиваем лимит с 10 до 15)
-                            for (let endIndex = startIndex + 1; endIndex <= Math.min(startIndex + 15, photos.length); endIndex++) {
+                            // Пробуем добавлять фото в ряд (вернем лимит к 10)
+                            for (let endIndex = startIndex + 1; endIndex <= Math.min(startIndex + 10, photos.length); endIndex++) {
                                 const candidateRow = photos.slice(startIndex, endIndex + 1);
                                 const candidateCost = calculateRowCost(candidateRow, targetHeight, containerWidth);
                                 
@@ -1467,8 +1467,8 @@
                             startIndex += bestRow.length;
                         }
                         
-                        // === УЛУЧШЕННАЯ ПОСТ-ОБРАБОТКА: Оптимизация последних рядов ===
-                        if (rows.length >= 3) {
+                        // === УМНАЯ ПОСТ-ОБРАБОТКА: Оптимизация только когда это действительно нужно ===
+                        if (rows.length >= 2) {
                             const lastRow = rows[rows.length - 1];
                             const secondLastRow = rows[rows.length - 2];
                             
@@ -1478,20 +1478,77 @@
                             
                             const lastRowFillRatio = lastRowTotalWidth / containerWidth;
                             
-                            // СЛУЧАЙ 1: Если в последнем ряду 2 или меньше фото - БОЛЕЕ АГРЕССИВНО объединяем
-                            if (lastRow.photos.length <= 2) {
+                            // Рассчитываем ширину предпоследнего ряда
+                            const secondLastRowTotalWidth = secondLastRow.photos.reduce((sum, img) => sum + img.aspectRatio * secondLastRow.height, 0) + 
+                                                          calculateGapWidth(secondLastRow.photos.length);
+                            const secondLastRowFillRatio = secondLastRowTotalWidth / containerWidth;
+                            
+                            // СЛУЧАЙ 1: Если последний ряд ОЧЕНЬ плохо заполнен (< 70%) и в нем мало фото (<= 3)
+                            if (lastRow.photos.length <= 3 && lastRowFillRatio < 0.70) {
+                                // Проверяем, не станет ли предпоследний ряд слишком коротким после перемещения
+                                if (secondLastRow.photos.length > 3) {
+                                    // Пробуем переместить 1-2 фото из предпоследнего ряда в последний
+                                    for (let moveCount = 1; moveCount <= Math.min(2, secondLastRow.photos.length - 3); moveCount++) {
+                                        const newSecondLastPhotos = secondLastRow.photos.slice(0, -moveCount);
+                                        const newLastPhotos = [...secondLastRow.photos.slice(-moveCount), ...lastRow.photos];
+                                        
+                                        // Пересчитываем высоты
+                                        const newSecondLastAspect = newSecondLastPhotos.reduce((sum, img) => sum + img.aspectRatio, 0);
+                                        const newLastAspect = newLastPhotos.reduce((sum, img) => sum + img.aspectRatio, 0);
+                                        
+                                        const newSecondLastGap = calculateGapWidth(newSecondLastPhotos.length);
+                                        const newLastGap = calculateGapWidth(newLastPhotos.length);
+                                        
+                                        const newSecondLastHeight = Math.min(
+                                            (containerWidth - newSecondLastGap) / newSecondLastAspect,
+                                            TARGET_ROW_HEIGHT * MAX_ROW_HEIGHT_MULTIPLIER
+                                        );
+                                        
+                                        const newLastHeight = Math.min(
+                                            (containerWidth - newLastGap) / newLastAspect,
+                                            TARGET_ROW_HEIGHT * MAX_ROW_HEIGHT_MULTIPLIER
+                                        );
+                                        
+                                        // Проверяем, что оба ряда остаются в разумных пределах
+                                        if (newSecondLastHeight >= TARGET_ROW_HEIGHT * 0.5 && 
+                                            newLastHeight >= TARGET_ROW_HEIGHT * 0.5 &&
+                                            newSecondLastHeight <= TARGET_ROW_HEIGHT * 1.8 &&
+                                            newLastHeight <= TARGET_ROW_HEIGHT * 1.8) {
+                                            
+                                            // Рассчитываем новое заполнение
+                                            const newLastRowWidth = newLastPhotos.reduce((sum, img) => sum + img.aspectRatio * newLastHeight, 0) + 
+                                                                  calculateGapWidth(newLastPhotos.length);
+                                            const newLastRowFillRatio = newLastRowWidth / containerWidth;
+                                            
+                                            // Применяем только если заполнение значительно улучшилось
+                                            if (newLastRowFillRatio > lastRowFillRatio + 0.15) {
+                                                rows[rows.length - 2] = {
+                                                    photos: newSecondLastPhotos,
+                                                    height: newSecondLastHeight
+                                                };
+                                                rows[rows.length - 1] = {
+                                                    photos: newLastPhotos,
+                                                    height: newLastHeight
+                                                };
+                                                break;
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            // СЛУЧАЙ 2: Если оба ряда плохо заполнены, объединяем их
+                            else if (lastRowFillRatio < 0.80 && secondLastRowFillRatio < 0.80 && 
+                                     lastRow.photos.length + secondLastRow.photos.length <= 8) {
                                 const mergedPhotos = [...secondLastRow.photos, ...lastRow.photos];
                                 const totalAspect = mergedPhotos.reduce((sum, img) => sum + img.aspectRatio, 0);
                                 const gapWidth = calculateGapWidth(mergedPhotos.length);
                                 
-                                // Пересчитываем высоту объединенного ряда
                                 const newHeight = Math.min(
                                     (containerWidth - gapWidth) / totalAspect,
-                                    TARGET_ROW_HEIGHT * (MAX_ROW_HEIGHT_MULTIPLIER + 0.3) // Увеличиваем максимальную высоту для объединенных рядов
+                                    TARGET_ROW_HEIGHT * MAX_ROW_HEIGHT_MULTIPLIER
                                 );
                                 
-                                // БОЛЕЕ ЛОЯЛЬНАЯ ПРОВЕРКА: разрешаем объединение даже если высота немного меньше
-                                if (newHeight >= TARGET_ROW_HEIGHT * 0.35) {
+                                if (newHeight >= TARGET_ROW_HEIGHT * 0.4) {
                                     rows[rows.length - 2] = {
                                         photos: mergedPhotos,
                                         height: newHeight
@@ -1499,126 +1556,9 @@
                                     rows.pop();
                                 }
                             }
-                            // СЛУЧАЙ 2: Если в последнем ряду 3-4 фото и они заполняют меньше 85% ширины
-                            else if (lastRow.photos.length >= 3 && lastRow.photos.length <= 4 && lastRowFillRatio < 0.95) {
-                                // Пробуем переместить 1-2 фото из предпоследнего ряда в последний
-                                let bestMoveCount = 0;
-                                let bestCost = Infinity;
-                                
-                                for (let moveCount = 1; moveCount <= Math.min(2, secondLastRow.photos.length - 2); moveCount++) {
-                                    const newSecondLastPhotos = secondLastRow.photos.slice(0, -moveCount);
-                                    const newLastPhotos = [...secondLastRow.photos.slice(-moveCount), ...lastRow.photos];
-                                    
-                                    // Пересчитываем высоты
-                                    const newSecondLastAspect = newSecondLastPhotos.reduce((sum, img) => sum + img.aspectRatio, 0);
-                                    const newLastAspect = newLastPhotos.reduce((sum, img) => sum + img.aspectRatio, 0);
-                                    
-                                    const newSecondLastGap = calculateGapWidth(newSecondLastPhotos.length);
-                                    const newLastGap = calculateGapWidth(newLastPhotos.length);
-                                    
-                                    const newSecondLastHeight = Math.min(
-                                        (containerWidth - newSecondLastGap) / newSecondLastAspect,
-                                        TARGET_ROW_HEIGHT * MAX_ROW_HEIGHT_MULTIPLIER
-                                    );
-                                    
-                                    const newLastHeight = Math.min(
-                                        (containerWidth - newLastGap) / newLastAspect,
-                                        TARGET_ROW_HEIGHT * MAX_ROW_HEIGHT_MULTIPLIER
-                                    );
-                                    
-                                    // БОЛЕЕ ЛОЯЛЬНЫЕ ПРОВЕРКИ ВЫСОТЫ
-                                    if (newSecondLastHeight >= TARGET_ROW_HEIGHT * 0.35 && newLastHeight >= TARGET_ROW_HEIGHT * 0.35) {
-                                        // Рассчитываем новое заполнение последнего ряда
-                                        const newLastRowWidth = newLastPhotos.reduce((sum, img) => sum + img.aspectRatio * newLastHeight, 0) + 
-                                                              calculateGapWidth(newLastPhotos.length);
-                                        const newLastRowFillRatio = newLastRowWidth / containerWidth;
-                                        
-                                        // УЛУЧШЕННЫЙ РАСЧЕТ СТОИМОСТИ: больше веса к заполнению последнего ряда
-                                        const cost = (1 - newLastRowFillRatio) * 0.7 + 
-                                                    Math.abs(newSecondLastHeight - newLastHeight) * 0.3;
-                                        
-                                        if (cost < bestCost) {
-                                            bestCost = cost;
-                                            bestMoveCount = moveCount;
-                                        }
-                                    }
-                                }
-                                
-                                // ПРИМЕНЯЕМ ЕСЛИ УЛУЧШЕНИЕ ЗНАЧИТЕЛЬНО
-                                if (bestMoveCount > 0 && bestCost < (1 - lastRowFillRatio) * 0.8) {
-                                    const newSecondLastPhotos = secondLastRow.photos.slice(0, -bestMoveCount);
-                                    const newLastPhotos = [...secondLastRow.photos.slice(-bestMoveCount), ...lastRow.photos];
-                                    
-                                    const newSecondLastAspect = newSecondLastPhotos.reduce((sum, img) => sum + img.aspectRatio, 0);
-                                    const newLastAspect = newLastPhotos.reduce((sum, img) => sum + img.aspectRatio, 0);
-                                    
-                                    const newSecondLastGap = calculateGapWidth(newSecondLastPhotos.length);
-                                    const newLastGap = calculateGapWidth(newLastPhotos.length);
-                                    
-                                    const newSecondLastHeight = Math.min(
-                                        (containerWidth - newSecondLastGap) / newSecondLastAspect,
-                                        TARGET_ROW_HEIGHT * MAX_ROW_HEIGHT_MULTIPLIER
-                                    );
-                                    
-                                    const newLastHeight = Math.min(
-                                        (containerWidth - newLastGap) / newLastAspect,
-                                        TARGET_ROW_HEIGHT * MAX_ROW_HEIGHT_MULTIPLIER
-                                    );
-                                    
-                                    rows[rows.length - 2] = {
-                                        photos: newSecondLastPhotos,
-                                        height: newSecondLastHeight
-                                    };
-                                    rows[rows.length - 1] = {
-                                        photos: newLastPhotos,
-                                        height: newLastHeight
-                                    };
-                                }
-                            }
-                            // СЛУЧАЙ 3: Если в последнем ряду больше 5 фото, но заполнение меньше 80%
-                            else if (lastRow.photos.length > 3 && lastRowFillRatio < 1.0 && secondLastRow.photos.length >= 3) {
-                                // Пробуем переместить одно фото из предпоследнего ряда
-                                const newSecondLastPhotos = secondLastRow.photos.slice(0, -1);
-                                const newLastPhotos = [...secondLastRow.photos.slice(-1), ...lastRow.photos];
-                                
-                                const newSecondLastAspect = newSecondLastPhotos.reduce((sum, img) => sum + img.aspectRatio, 0);
-                                const newLastAspect = newLastPhotos.reduce((sum, img) => sum + img.aspectRatio, 0);
-                                
-                                const newSecondLastGap = calculateGapWidth(newSecondLastPhotos.length);
-                                const newLastGap = calculateGapWidth(newLastPhotos.length);
-                                
-                                const newSecondLastHeight = Math.min(
-                                    (containerWidth - newSecondLastGap) / newSecondLastAspect,
-                                    TARGET_ROW_HEIGHT * MAX_ROW_HEIGHT_MULTIPLIER
-                                );
-                                
-                                const newLastHeight = Math.min(
-                                    (containerWidth - newLastGap) / newLastAspect,
-                                    TARGET_ROW_HEIGHT * MAX_ROW_HEIGHT_MULTIPLIER
-                                );
-                                
-                                // Проверяем, что улучшилось заполнение
-                                const newLastRowWidth = newLastPhotos.reduce((sum, img) => sum + img.aspectRatio * newLastHeight, 0) + 
-                                                      calculateGapWidth(newLastPhotos.length);
-                                const newLastRowFillRatio = newLastRowWidth / containerWidth;
-                                
-                                if (newLastRowFillRatio > lastRowFillRatio + 0.1 && // Требуем значительного улучшения
-                                    newSecondLastHeight >= TARGET_ROW_HEIGHT * 0.4 && 
-                                    newLastHeight >= TARGET_ROW_HEIGHT * 0.4) {
-                                    
-                                    rows[rows.length - 2] = {
-                                        photos: newSecondLastPhotos,
-                                        height: newSecondLastHeight
-                                    };
-                                    rows[rows.length - 1] = {
-                                        photos: newLastPhotos,
-                                        height: newLastHeight
-                                    };
-                                }
-                            }
                         }
 
-                        // === АГРЕССИВНОЕ ВЫРАВНИВАНИЕ ДЛЯ ПОСЛЕДНЕГО РЯДА В СЕКЦИИ ===
+                        // === АГРЕССИВНОЕ ВЫРАВНИВАНИЕ ТОЛЬКО ДЛЯ СИЛЬНО НЕДОЗАПОЛНЕННЫХ РЯДОВ ===
                         if (rows.length > 0) {
                             const lastRow = rows[rows.length - 1];
                             const totalAspect = lastRow.photos.reduce((sum, img) => sum + img.aspectRatio, 0);
@@ -1626,13 +1566,13 @@
                             const currentWidth = totalAspect * lastRow.height + gapWidth;
                             const fillRatio = currentWidth / containerWidth;
 
-                            // ЕСЛИ ПОСЛЕДНИЙ РЯД ЗАПОЛНЕН МЕНЕЕ ЧЕМ НА 95%, ПЫТАЕМСЯ РАСТЯНУТЬ ЕГО
-                            if (fillRatio <= 0.95) {
+                            // Растягиваем только если ряд заполнен менее чем на 80% и это не сделает фото слишком маленькими
+                            if (fillRatio < 0.80) {
                                 const desiredHeight = (containerWidth - gapWidth) / totalAspect;
-                                // Разрешаем последнему ряду быть выше, если это улучшает заполнение
-                                const maxAllowedHeight = TARGET_ROW_HEIGHT * (MAX_ROW_HEIGHT_MULTIPLIER + 0.4);
+                                // Ограничиваем растяжение, чтобы фото не стали слишком маленькими
+                                const maxAllowedHeight = TARGET_ROW_HEIGHT * 1.3;
                                 
-                                if (desiredHeight <= maxAllowedHeight && desiredHeight >= TARGET_ROW_HEIGHT * 0.3) {
+                                if (desiredHeight <= maxAllowedHeight && desiredHeight >= TARGET_ROW_HEIGHT * 0.6) {
                                     lastRow.height = desiredHeight;
                                 }
                             }
