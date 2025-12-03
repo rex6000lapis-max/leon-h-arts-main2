@@ -5,8 +5,8 @@ import {
     signInAnonymously, 
     signInWithCustomToken, 
     onAuthStateChanged,
-    signInWithEmailAndPassword, 
-    signOut 
+    signInWithEmailAndPassword, // НОВЫЙ ИМПОРТ
+    signOut // НОВЫЙ ИМПОРТ
 } from 'firebase/auth';
 import { 
     getFirestore, 
@@ -15,11 +15,10 @@ import {
     collection, 
     query, 
     addDoc,
-    updateDoc,
-    deleteDoc,
+    updateDoc, 
     arrayUnion,
     serverTimestamp,
-    writeBatch
+    // setLogLevel // Закомментировано для чистоты консоли
 } from 'firebase/firestore';
 import { 
     Plus, 
@@ -36,16 +35,23 @@ import {
     Key, 
     Edit, 
     AlertTriangle,
-    LogOut,
-    Eye,
-    EyeOff
+    LogOut 
 } from 'lucide-react';
 
 // --- КОНСТАНТЫ И НАСТРОЙКИ ---
+// *** ВАЖНО: ПАРОЛЬ УДАЛЕН. Используется аутентификация Firebase. ***
+
+// *** ШАГ 3: ЗАМЕНИТЕ ЭТОТ ЗАПОЛНИТЕЛЬ НА РЕАЛЬНЫЙ UID ВАШЕГО АККАУНТА АДМИНИСТРАТОРА ИЗ КОНСОЛИ FIREBASE ***
+// Это не пароль, а идентификатор пользователя. Он не дает доступ без ввода email/пароля.
 const ADMIN_UID = "fqU30jiK7rOobaur0XN2pVY4PMC2"; 
+// ---------------------------------------------------------------------------------------------------------
+
+// ПУТЬ К ПУБЛИЧНОЙ КОЛЛЕКЦИИ для галереи фанфиков
 const PUBLIC_COLLECTION_NAME = "fanfic_gallery_albums"; 
 
-// --- НАСТРОЙКА FIREBASE ---
+// --- НАСТРОЙКА FIREBASE (ЖЕСТКО ЗАКОДИРОВАННЫЕ ДАННЫЕ) ---
+// ВНИМАНИЕ: Эти данные предоставлены пользователем для тестирования и развертывания вне Canvas.
+// Приоритет: Глобальные переменные Canvas > Жестко закодированный конфиг.
 const HARDCODED_FIREBASE_CONFIG = {
     apiKey: "AIzaSyBpThMaS36IkmAqUrvk9WpWi0AhOhndhU8",
     authDomain: "leon-h-arts-6b69b.firebaseapp.com",
@@ -59,11 +65,15 @@ let firebaseConfig = null;
 let configError = null;
 
 try {
+    // 1. Приоритет: Глобальная переменная Canvas (__firebase_config)
     if (typeof __firebase_config !== 'undefined' && __firebase_config) {
+        // __firebase_config предоставляется как JSON-строка и должен быть разобран
         firebaseConfig = JSON.parse(__firebase_config);
     } else if (HARDCODED_FIREBASE_CONFIG.apiKey) {
+        // 2. Если глобальной переменной нет (запуск вне Canvas), используем жестко закодированный конфиг.
         firebaseConfig = HARDCODED_FIREBASE_CONFIG;
     } else {
+        // 3. Если ничего нет, это критическая ошибка.
         throw new Error("Конфигурация Firebase не определена.");
     }
 } catch (e) {
@@ -74,17 +84,25 @@ try {
     };
 }
 
+// Используем глобально предоставленный ID приложения (Canvas) для путей Firestore, 
+// с резервом на projectId из конфига.
 const appId = typeof __app_id !== 'undefined' && __app_id ? __app_id : (firebaseConfig?.projectId || 'default-app-id');
+// Переменная токена
 const initialAuthToken = typeof __initial_auth_token !== 'undefined' && __initial_auth_token !== null ? __initial_auth_token : null;
 
+
+// Инициализация Firebase (Однократная!)
+// Инициализация происходит только если нет критической ошибки конфигурации
 const app = firebaseConfig && !configError ? initializeApp(firebaseConfig) : null;
 const db = app ? getFirestore(app) : null;
 const auth = app ? getAuth(app) : null;
+// setLogLevel('debug'); // Для отладки в консоли
 
 // КОНСТАНТЫ ДЛЯ МАКЕТА ГАЛЕРЕИ
 const TARGET_ROW_HEIGHT = 300; 
 const GALLERY_GAP_PX = 2; 
 const MAX_ROW_HEIGHT_MULTIPLIER = 1.5; 
+
 
 // --- КОМПОНЕНТ: Модальное окно для увеличенного изображения ---
 const ImageModal = ({ image, onClose, onSaveCaption, albumId, onNext, onPrev, isAdmin }) => {
@@ -114,6 +132,7 @@ const ImageModal = ({ image, onClose, onSaveCaption, albumId, onNext, onPrev, is
         };
     }, [onClose, onNext, onPrev]);
 
+
     const handleSave = async () => {
         if (!isAdmin) {
              console.warn("Попытка сохранения без прав администратора.");
@@ -129,8 +148,9 @@ const ImageModal = ({ image, onClose, onSaveCaption, albumId, onNext, onPrev, is
             className="fixed inset-0 z-[60] bg-black bg-opacity-90 flex justify-center items-center transition-opacity"
             onClick={onClose}
         >
+            {/* --- Контейнер для кнопок X и i (вверху справа) --- */}
             <div className="absolute top-4 right-4 z-[70] flex space-x-2 p-2">
-                {isAdmin && (
+                {isAdmin && ( // ! Кнопка редактирования только для администратора
                     <button
                         onClick={(e) => { e.stopPropagation(); setIsEditPanelOpen(prev => !prev); }}
                         className={`p-2 text-white transition rounded-full shadow-lg ${
@@ -151,6 +171,7 @@ const ImageModal = ({ image, onClose, onSaveCaption, albumId, onNext, onPrev, is
                 </button>
             </div>
             
+            {/* --- Левая/Правая навигация --- */}
             <div 
                 className="fixed-click-zone left group"
                 onClick={(e) => { e.stopPropagation(); onPrev(); }}
@@ -170,6 +191,7 @@ const ImageModal = ({ image, onClose, onSaveCaption, albumId, onNext, onPrev, is
                 </button>
             </div>
             
+            {/* Контейнер изображения */}
             <div 
                 className="w-full h-full flex justify-center items-center" 
                 onClick={(e) => e.stopPropagation()} 
@@ -186,6 +208,7 @@ const ImageModal = ({ image, onClose, onSaveCaption, albumId, onNext, onPrev, is
                 />
             </div>
             
+            {/* --- Контейнер подписи и редактирования --- */}
             <div 
                 className="absolute bottom-4 left-4 z-[70] max-w-sm w-full sm:w-auto" 
                 onClick={(e) => e.stopPropagation()} 
@@ -200,6 +223,7 @@ const ImageModal = ({ image, onClose, onSaveCaption, albumId, onNext, onPrev, is
                     )}
                 </div>
 
+                {/* Панель редактирования подписи (Только для Админа) */}
                 {isAdmin && (
                     <div 
                         className={`
@@ -234,43 +258,48 @@ const ImageModal = ({ image, onClose, onSaveCaption, albumId, onNext, onPrev, is
         </div>
     );
 };
+// --------------------------------------------------------------------
+
 
 // Главный компонент приложения
 const App = () => {
+    // Используем '|| false' для authReady, чтобы убедиться, что состояние определено
     const [authReady, setAuthReady] = useState(false);
     const [userId, setUserId] = useState(null);
     const [albums, setAlbums] = useState([]);
     const [loading, setLoading] = useState(true);
+    // Инициализируем state ошибкой, если она возникла при загрузке конфига
     const [error, setError] = useState(configError || null); 
 
+    // --- НОВОЕ: Состояние администратора ---
     const [isAdmin, setIsAdmin] = useState(false);
     const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
     
+    // --- НОВОЕ: Состояние переименования ---
     const [isRenameModalOpen, setIsRenameModalOpen] = useState(false);
     const [albumToRename, setAlbumToRename] = useState(null);
 
     const [currentView, setCurrentView] = useState('home'); 
     const [selectedAlbum, setSelectedAlbum] = useState(null);
 
+    // Состояния для режимов редактирования
     const [isDeleteMode, setIsDeleteMode] = useState(false);
     const [isReorderMode, setIsReorderMode] = useState(false);
-
-    // НОВЫЕ СОСТОЯНИЯ ДЛЯ УПРАВЛЕНИЯ АЛЬБОМАМИ
-    const [isAlbumReorderMode, setIsAlbumReorderMode] = useState(false);
-    const [albumToDelete, setAlbumToDelete] = useState(null);
-    const [deleteStep, setDeleteStep] = useState(0);
     
+    // Состояние модальных окон
     const [isAddAlbumModalOpen, setIsAddAlbumModalOpen] = useState(false);
     const [isAddPhotoModalOpen, setIsAddPhotoModalOpen] = useState(false);
     const [isAddDividerModalOpen, setIsAddDividerModalOpen] = useState(false);
     
     const [enlargedImage, setEnlargedImage] = useState(null); 
     
+    // Состояния для Drag and Drop
     const dragItemUniqueId = useRef(null); 
     const dragOverItemUniqueId = useRef(null); 
 
     // --- 1. Аутентификация и Настройка ---
     useEffect(() => {
+        // Если есть критическая ошибка конфигурации, дальше не идем
         if (error && error.isCritical) {
             setAuthReady(true); 
             setLoading(false);
@@ -279,10 +308,12 @@ const App = () => {
 
         const setupFirebase = async () => {
             if (!auth) { 
+                // Если auth не инициализирован (из-за ошибки конфига), просто завершаем.
                 setAuthReady(true);
                 return;
             }
             try {
+                // Всегда пытаемся войти, чтобы получить userId для сессии
                 if (initialAuthToken) {
                     await signInWithCustomToken(auth, initialAuthToken);
                 } else {
@@ -301,6 +332,7 @@ const App = () => {
         const unsubscribe = onAuthStateChanged(auth, (user) => {
             if (user) {
                 setUserId(user.uid);
+                // Проверяем, является ли текущий пользователь администратором
                 if (user.uid === ADMIN_UID) {
                     setIsAdmin(true);
                     localStorage.setItem('isAdmin', 'true');
@@ -320,26 +352,31 @@ const App = () => {
         return () => unsubscribe();
     }, [error]); 
 
+    // Функция для сброса режимов редактирования при смене статуса Admin
     useEffect(() => {
+        // Сброс режимов редактирования при выходе из Admin
         if (!isAdmin) {
             setIsDeleteMode(false);
             setIsReorderMode(false);
-            setIsAlbumReorderMode(false);
         }
     }, [isAdmin]);
 
+    // Функция для открытия модала переименования
     const handleOpenRenameModal = useCallback((album) => {
         if (!isAdmin) return;
         setAlbumToRename(album);
         setIsRenameModalOpen(true);
     }, [isAdmin]);
 
+    // Функция для закрытия модала переименования
     const handleCloseRenameModal = useCallback(() => {
         setIsRenameModalOpen(false);
         setAlbumToRename(null);
     }, []);
 
-    // --- ЛОГИКА АДМИНИСТРАТОРА ---
+    // --- ЛОГИКА АДМИНИСТРАТОРА (Login/Logout) ---
+
+    // НОВАЯ ФУНКЦИЯ ВХОДА АДМИНА (Email/Пароль)
     const handleAdminLogin = async (email, password) => {
         if (!auth) {
             alertUser('Ошибка', 'Сервисы Firebase не инициализированы.');
@@ -356,6 +393,7 @@ const App = () => {
                 localStorage.setItem('isAdmin', 'true');
                 alertUser('Успех', 'Вход Администратора выполнен успешно!');
             } else {
+                // Пользователь успешно вошел, но он не администратор. Выходим.
                 await signOut(auth);
                 alertUser('Ошибка доступа', 'Этот аккаунт не имеет прав администратора.');
             }
@@ -365,10 +403,13 @@ const App = () => {
         }
     };
 
+    // ФУНКЦИЯ ВЫХОДА АДМИНА
     const handleAdminLogout = async () => {
         if (!auth) return;
         try {
+            // Выходим из аккаунта администратора
             await signOut(auth);
+            // Возвращаемся к анонимной/токеновой сессии, если это возможно
             if (initialAuthToken) {
                 await signInWithCustomToken(auth, initialAuthToken);
             } else {
@@ -378,7 +419,6 @@ const App = () => {
             localStorage.removeItem('isAdmin');
             setIsDeleteMode(false);
             setIsReorderMode(false);
-            setIsAlbumReorderMode(false);
             alertUser('Выход', 'Вы успешно вышли из режима администратора.');
         } catch (e) {
             console.error("Ошибка выхода:", e);
@@ -386,7 +426,9 @@ const App = () => {
         }
     };
     
-    // Функции навигации в модальном окне
+    // --------------------------------------------
+
+    // Функции навигации в модальном окне (пропускает разделители)
     const handleNavigation = useCallback((direction) => {
         if (!enlargedImage || !selectedAlbum) return;
 
@@ -401,7 +443,7 @@ const App = () => {
         let nextIndex;
         if (direction === 'next') {
             nextIndex = (currentIndex + 1) % images.length;
-        } else {
+        } else { // 'prev'
             nextIndex = (currentIndex - 1 + images.length) % images.length;
         }
         
@@ -411,52 +453,45 @@ const App = () => {
 
     const handleNextImage = useCallback(() => handleNavigation('next'), [handleNavigation]);
     const handlePrevImage = useCallback(() => handleNavigation('prev'), [handleNavigation]);
+    // --------------------------------------------------
 
     // Управление режимами редактирования
     const toggleDeleteMode = useCallback(() => {
-        if (!isAdmin) return;
+        if (!isAdmin) return; // ! Проверка Admin
         setIsDeleteMode(prev => !prev);
         if (!isDeleteMode) { 
-            setIsReorderMode(false);
-            setIsAlbumReorderMode(false);
+            setIsReorderMode(false); // Отключаем переупорядочивание
         }
     }, [isDeleteMode, isAdmin]);
 
     const toggleReorderMode = useCallback(() => {
-        if (!isAdmin) return;
+        if (!isAdmin) return; // ! Проверка Admin
         setIsReorderMode(prev => !prev);
         if (!isReorderMode) { 
-            setIsDeleteMode(false);
-            setIsAlbumReorderMode(false);
+            setIsDeleteMode(false); // Отключаем удаление
         }
     }, [isReorderMode, isAdmin]);
-
-    // НОВАЯ ФУНКЦИЯ: Переключение режима сортировки альбомов
-    const toggleAlbumReorderMode = useCallback(() => {
-        if (!isAdmin) return;
-        setIsAlbumReorderMode(prev => !prev);
-        setAlbumToDelete(null);
-    }, [isAdmin]);
+    // -----------------------------------------
 
     const handleGoHome = useCallback(() => {
         setSelectedAlbum(null);
         setCurrentView('home');
         setIsDeleteMode(false); 
         setIsReorderMode(false);
-        setIsAlbumReorderMode(false);
     }, []); 
 
     const handleOpenAlbum = useCallback((album) => {
-        if (isAlbumReorderMode) return;
         setSelectedAlbum(album);
         setCurrentView('album');
         setIsDeleteMode(false); 
         setIsReorderMode(false);
-        setIsAlbumReorderMode(false);
-    }, [isAlbumReorderMode]); 
+    }, []); 
 
     const alertUser = (title, message) => {
+        // Простая реализация модального окна/сообщения
         console.warn(`[ВНИМАНИЕ ${title}]: ${message}`);
+        // В реальном приложении здесь был бы вызов state для модального окна
+        // Используем alert, так как в песочнице нет встроенного модала, а это важная обратная связь.
         if (typeof window !== 'undefined') {
             const tempDiv = document.createElement('div');
             tempDiv.innerHTML = `
@@ -470,8 +505,10 @@ const App = () => {
         }
     };
 
-    // --- 2. Получение данных об альбомах ---
+
+    // --- 2. Получение данных об альбомах (Real-time Listener) ---
     useEffect(() => {
+        // Чтение доступно только после успешной авторизации (наличия userId)
         if (!db || !userId) {
             if (!userId && authReady) {
                 setLoading(false); 
@@ -481,10 +518,12 @@ const App = () => {
 
         setLoading(true);
 
+        // ИЗМЕНЕНО: Используем публичный путь
         const collectionPath = `artifacts/${appId}/public/data/${PUBLIC_COLLECTION_NAME}`;
         const q = query(collection(db, collectionPath));
 
         const unsubscribe = onSnapshot(q, 
+            // 1. Success Callback
             (querySnapshot) => {
                 const fetchedAlbums = [];
                 querySnapshot.forEach((doc) => {
@@ -493,14 +532,7 @@ const App = () => {
                     fetchedAlbums.push({ id: doc.id, ...data, images });
                 });
                 
-                // НОВАЯ ЛОГИКА СОРТИРОВКИ: сначала по orderIndex, затем по дате
-                fetchedAlbums.sort((a, b) => {
-                    const orderA = a.orderIndex !== undefined ? a.orderIndex : Number.MAX_SAFE_INTEGER;
-                    const orderB = b.orderIndex !== undefined ? b.orderIndex : Number.MAX_SAFE_INTEGER;
-                    
-                    if (orderA !== orderB) return orderA - orderB;
-                    return (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0);
-                });
+                fetchedAlbums.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
 
                 setAlbums(fetchedAlbums);
                 setLoading(false);
@@ -511,6 +543,7 @@ const App = () => {
                         if (updatedAlbum) {
                             return updatedAlbum; 
                         }
+                        // Если альбом был удален, возвращаемся на Главную
                         if (currentView === 'album') { 
                             setCurrentView('home'); 
                             return null; 
@@ -518,7 +551,9 @@ const App = () => {
                     }
                     return prevSelectedAlbum; 
                 });
+            
             }, 
+            // 2. Error Callback (перемещен из setSelectedAlbum)
             (err) => { 
                 console.error("Ошибка получения данных Firestore:", err);
                 setError({
@@ -527,60 +562,14 @@ const App = () => {
                 });
                 setLoading(false);
             }
-        );
+        ); // Конец вызова onSnapshot
 
         return () => unsubscribe();
-    }, [userId, authReady, currentView]);
+    }, [userId, authReady, currentView]); // Зависимость от userId гарантирует, что мы ждем успешного входа
 
     // --- 3. CRUD-функции (Только для Администратора) ---
     
-    // НОВЫЕ ФУНКЦИИ ДЛЯ УПРАВЛЕНИЯ АЛЬБОМАМИ
-    const initiateDeleteAlbum = (album) => {
-        if (!isAdmin) return;
-        setAlbumToDelete(album);
-        setDeleteStep(1);
-    };
-
-    const confirmDeleteAlbum = async () => {
-        if (!albumToDelete || !isAdmin) return;
-
-        if (deleteStep === 1) {
-            setDeleteStep(2);
-            return;
-        }
-
-        if (deleteStep === 2) {
-            try {
-                const collectionPath = `artifacts/${appId}/public/data/${PUBLIC_COLLECTION_NAME}`;
-                await deleteDoc(doc(db, collectionPath, albumToDelete.id));
-                console.log(`Альбом ${albumToDelete.name} удален.`);
-                setAlbumToDelete(null);
-                setDeleteStep(0);
-            } catch (e) {
-                console.error("Ошибка удаления альбома:", e);
-                alertUser('Ошибка', 'Не удалось удалить альбом.');
-            }
-        }
-    };
-
-    const cancelDeleteAlbum = () => {
-        setAlbumToDelete(null);
-        setDeleteStep(0);
-    };
-
-    const toggleAlbumVisibility = async (album) => {
-        if (!isAdmin) return;
-        try {
-            const collectionPath = `artifacts/${appId}/public/data/${PUBLIC_COLLECTION_NAME}`;
-            await updateDoc(doc(db, collectionPath, album.id), {
-                hidden: !album.hidden
-            });
-        } catch (e) {
-            console.error("Ошибка обновления видимости:", e);
-            alertUser('Ошибка', 'Не удалось изменить видимость.');
-        }
-    };
-
+    // **ФУНКЦИЯ ПЕРЕИМЕНОВАНИЯ АЛЬБОМА**
     const renameAlbum = async (albumId, newName) => {
         if (!isAdmin) {
             alertUser('Ошибка доступа', 'Вы должны быть Администратором для переименования альбомов.');
@@ -611,8 +600,9 @@ const App = () => {
         }
     };
     
+    // **ОБНОВЛЕНИЕ ПОДПИСИ ФОТОГРАФИИ**
     const updatePhotoCaption = async (albumId, photoTimestamp, newCaption) => {
-        if (!isAdmin) {
+        if (!isAdmin) { // ! Проверка Admin
             alertUser('Ошибка доступа', 'Вы должны быть Администратором для редактирования подписей.');
             return;
         }
@@ -655,8 +645,9 @@ const App = () => {
         }
     };
     
+    // **УДАЛЕНИЕ ЭЛЕМЕНТА (ФОТО ИЛИ РАЗДЕЛИТЕЛЬ)**
     const deletePhoto = async (albumId, itemToDelete) => {
-        if (!isAdmin) {
+        if (!isAdmin) { // ! Проверка Admin
             alertUser('Ошибка доступа', 'Вы должны быть Администратором для удаления элементов.');
             return;
         }
@@ -672,6 +663,7 @@ const App = () => {
             const currentAlbum = albums.find(a => a.id === albumId);
             
             if (currentAlbum) {
+                // Фильтруем элемент по уникальному timestamp
                 const updatedImages = currentAlbum.images.filter(item => item.timestamp !== itemToDelete.timestamp);
                 
                 await updateDoc(albumRef, {
@@ -680,6 +672,7 @@ const App = () => {
                 
                 console.log(`Элемент (тип: ${itemToDelete.type || 'photo'}) ${itemToDelete.timestamp} удален.`);
                 
+                // Закрываем модал, если удаленный элемент был увеличен
                 if (enlargedImage && enlargedImage.timestamp === itemToDelete.timestamp) {
                     setEnlargedImage(null);
                 }
@@ -691,65 +684,13 @@ const App = () => {
         }
     };
 
-    // --- DRAG AND DROP ДЛЯ АЛЬБОМОВ ---
-    const handleAlbumDragStart = (e, albumId) => {
-        if (!isAlbumReorderMode || !isAdmin) return;
-        dragItemUniqueId.current = albumId;
-        e.dataTransfer.effectAllowed = "move";
-    };
 
-    const handleAlbumDragEnter = (e, albumId) => {
-        if (!isAlbumReorderMode || !isAdmin) return;
-        dragOverItemUniqueId.current = albumId;
-    };
-
-    const handleAlbumDrop = async () => {
-        if (!isAlbumReorderMode || !isAdmin) return;
-        
-        const draggedId = dragItemUniqueId.current;
-        const targetId = dragOverItemUniqueId.current;
-        
-        if (!draggedId || !targetId || draggedId === targetId) {
-            dragItemUniqueId.current = null; dragOverItemUniqueId.current = null;
-            return;
-        }
-
-        const newAlbums = [...albums];
-        const draggedIndex = newAlbums.findIndex(a => a.id === draggedId);
-        const targetIndex = newAlbums.findIndex(a => a.id === targetId);
-
-        if (draggedIndex === -1 || targetIndex === -1) return;
-
-        const [movedAlbum] = newAlbums.splice(draggedIndex, 1);
-        newAlbums.splice(targetIndex, 0, movedAlbum);
-
-        setAlbums(newAlbums);
-
-        try {
-            const batch = writeBatch(db);
-            const collectionPath = `artifacts/${appId}/public/data/${PUBLIC_COLLECTION_NAME}`;
-            
-            newAlbums.forEach((album, index) => {
-                const ref = doc(db, collectionPath, album.id);
-                batch.update(ref, { orderIndex: index });
-            });
-            
-            await batch.commit();
-            console.log("Порядок альбомов обновлен");
-        } catch (e) {
-            console.error("Ошибка сохранения порядка альбомов:", e);
-            alertUser('Ошибка', 'Не удалось сохранить порядок.');
-        }
-
-        dragItemUniqueId.current = null;
-        dragOverItemUniqueId.current = null;
-    };
-
-    // --- DRAG AND DROP ДЛЯ ФОТО ---
+    // **ИЗМЕНЕНИЕ ПОРЯДКА ФОТОГРАФИЙ И РАЗДЕЛИТЕЛЕЙ (DRAG AND DROP)**
     const handleDragStart = useCallback((e, uniqueId) => {
-        if (!isReorderMode || !isAdmin) return;
+        if (!isReorderMode || !isAdmin) return; // ! Проверка Admin
         dragItemUniqueId.current = uniqueId;
         e.dataTransfer.effectAllowed = "move";
+        // Установка Drag Image для лучшего UX
         if (e.dataTransfer.setDragImage) {
              const dragElement = e.target.closest('div').querySelector('img') || e.target.closest('div').querySelector('h2');
              if(dragElement) e.dataTransfer.setDragImage(dragElement, 10, 10);
@@ -757,12 +698,12 @@ const App = () => {
     }, [isReorderMode, isAdmin]);
 
     const handleDragEnter = useCallback((e, uniqueId) => {
-        if (!isReorderMode || !isAdmin) return;
+        if (!isReorderMode || !isAdmin) return; // ! Проверка Admin
         dragOverItemUniqueId.current = uniqueId;
     }, [isReorderMode, isAdmin]);
 
     const handleDragOver = useCallback((e) => {
-        if (!isReorderMode || !isAdmin) return;
+        if (!isReorderMode || !isAdmin) return; // ! Проверка Admin
         e.preventDefault();
     }, [isReorderMode, isAdmin]);
 
@@ -783,6 +724,7 @@ const App = () => {
             dragOverItemUniqueId.current = null;
             return;
         }
+
 
         const draggedId = dragItemUniqueId.current;
         const targetId = dragOverItemUniqueId.current;
@@ -824,14 +766,15 @@ const App = () => {
         dragItemUniqueId.current = null;
         dragOverItemUniqueId.current = null;
     }, [isReorderMode, isAdmin, selectedAlbum, db]);
+    // ------------------------------------------------------------------
 
-    // --- СОЗДАНИЕ КОНТЕНТА ---
+    // **СОЗДАНИЕ РАЗДЕЛИТЕЛЯ**
     const addDivider = async (albumId, text) => {
-        if (!isAdmin) {
+        if (!isAdmin) { // ! Проверка Admin
             alertUser('Ошибка доступа', 'Вы должны быть Администратором для добавления разделителей.');
             return;
         }
-        if (!albumId || !text.trim() || !db) {
+        if (!albumId || !text.trim() || !db) { // ! Проверка db
             alertUser('Критическая ошибка', 'Не удалось добавить разделитель: не инициализирована база данных.');
             return;
         }
@@ -842,7 +785,7 @@ const App = () => {
             
             const newDividerEntry = {
                 type: 'divider',
-                timestamp: Date.now(),
+                timestamp: Date.now(), // Уникальный ID
                 text: text.trim(), 
             };
             
@@ -859,28 +802,27 @@ const App = () => {
         }
     };
 
+
+    // Создание нового альбома
     const createNewAlbum = async (name) => {
-        if (!isAdmin) {
+        if (!isAdmin) { // ! Проверка Admin
             alertUser('Ошибка доступа', 'Вы должны быть Администратором для создания альбомов.');
             return;
         }
-        if (!name.trim() || !db) {
+        if (!name.trim() || !db) { // ! Проверка db
             alertUser('Критическая ошибка', 'Не удалось создать альбом: не инициализирована база данных.');
             return;
         }
 
+        const albumData = {
+            name: name.trim(),
+            createdAt: serverTimestamp(),
+            images: [], 
+            previewUrl: null // Теперь это поле не используется для обложки, но остается для потенциального будущего использования
+        };
         try {
             const collectionPath = `artifacts/${appId}/public/data/${PUBLIC_COLLECTION_NAME}`;
-            // Добавляем orderIndex в конец списка
-            const maxOrderIndex = albums.length > 0 ? Math.max(...albums.map(a => a.orderIndex || 0)) : 0;
-            
-            await addDoc(collection(db, collectionPath), {
-                name: name.trim(),
-                createdAt: serverTimestamp(),
-                images: [], 
-                hidden: false,
-                orderIndex: maxOrderIndex + 1
-            });
+            await addDoc(collection(db, collectionPath), albumData);
             setIsAddAlbumModalOpen(false);
             console.log(`Альбом "${name}" создан.`);
         } catch (e) {
@@ -889,12 +831,13 @@ const App = () => {
         }
     };
 
+    // Добавление ссылки на фото в альбом
     const addPhotoLink = async (albumId, url, aspectRatio = 1.0) => {
-        if (!isAdmin) {
+        if (!isAdmin) { // ! Проверка Admin
             alertUser('Ошибка доступа', 'Вы должны быть Администратором для добавления фото.');
             return;
         }
-        if (!albumId || !url.trim() || !db) {
+        if (!albumId || !url.trim() || !db) { // ! Проверка db
             alertUser('Критическая ошибка', 'Не удалось добавить фото: не инициализирована база данных.');
             return;
         }
@@ -906,11 +849,12 @@ const App = () => {
             const newImageEntry = {
                 url: url.trim(),
                 type: 'photo',
-                timestamp: Date.now(),
+                timestamp: Date.now(), // Уникальный ID
                 aspectRatio: parseFloat(aspectRatio) > 0 ? parseFloat(aspectRatio) : 1.0, 
                 caption: '' 
             };
             
+            // 1. Обновление Firestore
             await updateDoc(albumRef, {
                 images: arrayUnion(newImageEntry)
             });
@@ -925,6 +869,54 @@ const App = () => {
     };
 
     // --- Вспомогательные компоненты ---
+    const AlbumCard = ({ album }) => {
+        // Находим самое первое фото, игнорируя любые сохраненные previewUrl
+        const firstPhoto = album.images.find(item => item.type !== 'divider' && item.url);
+        const previewUrl = firstPhoto ? firstPhoto.url : null;
+        
+        const imageCount = album.images.filter(item => item.type !== 'divider').length;
+        
+        return (
+            <div className="relative">
+                <div 
+                    onClick={() => handleOpenAlbum(album)}
+                    className="bg-white rounded-xl shadow-lg hover:shadow-xl transition-shadow cursor-pointer overflow-hidden transform hover:scale-[1.02] active:scale-100 duration-200 ease-in-out"
+                >
+                    <div className="w-full h-48 bg-gray-200 flex items-center justify-center relative">
+                        {previewUrl ? (
+                            <img 
+                                src={previewUrl} 
+                                alt={`Превью ${album.name}`} 
+                                className="w-full h-full object-cover"
+                                onError={(e) => { e.target.onerror = null; e.target.src = "https://placehold.co/600x400/CCCCCC/333333?text=Ошибка+загрузки"; }}
+                            />
+                        ) : (
+                            <ImageIcon className="w-1/3 h-1/3 text-gray-500" />
+                        )}
+                    </div>
+                    <div className="p-4">
+                        <h3 className="font-semibold text-lg text-gray-800 truncate" title={album.name}>{album.name}</h3>
+                        <p className="text-sm text-gray-500 mt-1">{imageCount} {imageCount === 1 ? 'фото' : (imageCount > 1 && imageCount < 5 ? 'фото' : 'фотографий')}</p>
+                    </div>
+                </div>
+                
+                {/* Кнопка переименования (Только для Admin) */}
+                {isAdmin && (
+                    <button
+                        onClick={(e) => { 
+                            e.stopPropagation(); 
+                            handleOpenRenameModal(album);
+                        }}
+                        className="absolute top-2 right-2 p-1 bg-white rounded-full shadow-lg text-indigo-600 hover:bg-indigo-50 transition"
+                        title="Переименовать альбом"
+                    >
+                        <Edit className="h-4 w-4" />
+                    </button>
+                )}
+            </div>
+        );
+    };
+
     const LoadingSpinner = () => (
         <div className="flex justify-center items-center h-full min-h-[300px]">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
@@ -959,135 +951,8 @@ const App = () => {
             </div>
         );
     };
-
-    // НОВЫЙ КОМПОНЕНТ: Модальное окно подтверждения удаления альбома
-    const DeleteAlbumConfirmModal = () => {
-        if (!albumToDelete) return null;
-
-        return (
-            <div className="fixed inset-0 z-[100] bg-black bg-opacity-60 flex justify-center items-center p-4">
-                <div className="bg-white rounded-xl shadow-2xl w-full max-w-sm p-6 text-center animate-fade-in-up">
-                    <div className="mb-4 flex justify-center text-red-500">
-                        <AlertTriangle size={48} />
-                    </div>
-                    
-                    {deleteStep === 1 && (
-                        <>
-                            <h3 className="text-xl font-bold text-gray-800 mb-2">Удалить альбом?</h3>
-                            <p className="text-gray-600 mb-6">Вы хотите удалить альбом <b>"{albumToDelete.name}"</b>?</p>
-                            <div className="flex justify-center space-x-3">
-                                <button onClick={cancelDeleteAlbum} className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200">Отмена</button>
-                                <button onClick={confirmDeleteAlbum} className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">Да, удалить</button>
-                            </div>
-                        </>
-                    )}
-
-                    {deleteStep === 2 && (
-                        <>
-                            <h3 className="text-xl font-bold text-red-600 mb-2">Вы абсолютно уверены?</h3>
-                            <p className="text-gray-600 mb-6">Это действие <b>нельзя отменить</b>. Все фотографии в этом альбоме будут потеряны.</p>
-                            <div className="flex justify-center space-x-3">
-                                <button onClick={cancelDeleteAlbum} className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200">Нет, оставить</button>
-                                <button onClick={confirmDeleteAlbum} className="px-4 py-2 bg-red-700 text-white rounded-lg hover:bg-red-800 shadow-lg font-bold">ДА, УДАЛИТЬ НАВСЕГДА</button>
-                            </div>
-                        </>
-                    )}
-                </div>
-            </div>
-        );
-    };
-
-    const AlbumCard = ({ album }) => {
-        const firstPhoto = album.images.find(item => item.type !== 'divider' && item.url);
-        const previewUrl = firstPhoto ? firstPhoto.url : null;
-        const imageCount = album.images.filter(item => item.type !== 'divider').length;
-        
-        const opacityClass = album.hidden ? 'opacity-60 grayscale' : 'opacity-100';
-        const hiddenBadge = album.hidden ? (
-            <div className="absolute top-2 left-2 bg-black/60 text-white px-2 py-1 rounded text-xs flex items-center">
-                <EyeOff size={12} className="mr-1"/> Скрыт
-            </div>
-        ) : null;
-
-        const isDragging = isAlbumReorderMode && dragItemUniqueId.current === album.id;
-        const isDragOver = isAlbumReorderMode && dragOverItemUniqueId.current === album.id;
-
-        return (
-            <div 
-                className={`
-                    relative group transition-all duration-200
-                    ${isAlbumReorderMode ? 'cursor-move' : ''}
-                    ${isDragging ? 'opacity-20 scale-95' : ''}
-                    ${isDragOver ? 'transform scale-105' : ''}
-                `}
-                draggable={isAlbumReorderMode && isAdmin}
-                onDragStart={(e) => handleAlbumDragStart(e, album.id)}
-                onDragEnter={(e) => handleAlbumDragEnter(e, album.id)}
-                onDragOver={(e) => e.preventDefault()}
-                onDrop={handleAlbumDrop}
-            >
-                <div 
-                    onClick={() => handleOpenAlbum(album)}
-                    className={`bg-white rounded-xl shadow-lg hover:shadow-xl transition-all overflow-hidden cursor-pointer h-full flex flex-col ${opacityClass} ${isDragOver ? 'ring-2 ring-indigo-500' : ''}`}
-                >
-                    <div className="w-full h-48 bg-gray-200 flex items-center justify-center relative flex-shrink-0">
-                        {previewUrl ? (
-                            <img 
-                                src={previewUrl} 
-                                alt={album.name} 
-                                className="w-full h-full object-cover"
-                                onError={(e) => { e.target.onerror = null; e.target.src = "https://placehold.co/600x400/CCCCCC/333333?text=Ошибка+загрузки"; }}
-                            />
-                        ) : (
-                            <ImageIcon className="w-1/3 h-1/3 text-gray-500" />
-                        )}
-                        {hiddenBadge}
-                        {!isAlbumReorderMode && (
-                            <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-10 transition-all duration-300" />
-                        )}
-                    </div>
-                    
-                    <div className="p-4 flex-grow relative">
-                        <h3 className="font-semibold text-lg text-gray-800 truncate pr-8" title={album.name}>{album.name}</h3>
-                        <p className="text-sm text-gray-500 mt-1">{imageCount} {imageCount === 1 ? 'фото' : (imageCount > 1 && imageCount < 5 ? 'фото' : 'фотографий')}</p>
-                    </div>
-                </div>
-                
-                {/* КНОПКИ УПРАВЛЕНИЯ АЛЬБОМОМ (Только Админ) */}
-                {isAdmin && !isAlbumReorderMode && (
-                    <div className="absolute top-2 right-2 flex flex-col space-y-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
-                        {/* Редактировать имя */}
-                        <button
-                            onClick={(e) => { e.stopPropagation(); handleOpenRenameModal(album); }}
-                            className="p-1.5 bg-white rounded-full shadow-md text-gray-700 hover:text-indigo-600 hover:bg-gray-50"
-                            title="Переименовать"
-                        >
-                            <Edit size={16} />
-                        </button>
-                        
-                        {/* Скрыть/Показать */}
-                        <button
-                            onClick={(e) => { e.stopPropagation(); toggleAlbumVisibility(album); }}
-                            className={`p-1.5 bg-white rounded-full shadow-md hover:bg-gray-50 ${album.hidden ? 'text-indigo-600' : 'text-gray-500'}`}
-                            title={album.hidden ? "Сделать публичным" : "Скрыть альбом"}
-                        >
-                            {album.hidden ? <Eye size={16} /> : <EyeOff size={16} />}
-                        </button>
-
-                        {/* Удалить */}
-                        <button
-                            onClick={(e) => { e.stopPropagation(); initiateDeleteAlbum(album); }}
-                            className="p-1.5 bg-white rounded-full shadow-md text-red-500 hover:text-red-700 hover:bg-red-50"
-                            title="Удалить альбом"
-                        >
-                            <Trash2 size={16} />
-                        </button>
-                    </div>
-                )}
-            </div>
-        );
-    };
     
+    // --- Модал для переименования альбома ---
     const RenameAlbumModal = () => {
         const [newName, setNewName] = useState(albumToRename?.name || '');
         const [isSaving, setIsSaving] = useState(false);
@@ -1132,7 +997,9 @@ const App = () => {
             </Modal>
         );
     };
+    // ----------------------------------------------
     
+    // --- Модал для входа администратора (Используем Email/Пароль) ---
     const AdminLoginModal = () => {
         const [email, setEmail] = useState('');
         const [password, setPassword] = useState('');
@@ -1143,6 +1010,7 @@ const App = () => {
                 alertUser('Ошибка', 'Введите email и пароль.');
                 return;
             }
+            // Вызываем новую функцию входа
             handleAdminLogin(email, password);
         };
 
@@ -1183,6 +1051,8 @@ const App = () => {
             </Modal>
         );
     };
+    // ----------------------------------------------
+
 
     const AddAlbumModal = () => {
         const [albumName, setAlbumName] = useState('');
@@ -1254,6 +1124,7 @@ const App = () => {
         );
     };
 
+
     const AddPhotoModal = () => {
         const [photoUrl, setPhotoUrl] = useState('');
         const [aspectRatio, setAspectRatio] = useState('1.0');
@@ -1295,6 +1166,7 @@ const App = () => {
                 setPreviewImage(url);
             }
         };
+
 
         return (
             <Modal isOpen={isAddPhotoModalOpen} onClose={() => setIsAddPhotoModalOpen(false)} title="Добавить фото по ссылке">
@@ -1372,7 +1244,7 @@ const App = () => {
         );
     };
     
-    // Вид: Сетка фото в альбоме
+    // Вид: Сетка фото в альбоме (Justified Gallery)
     const AlbumPhotoView = () => {
         if (!selectedAlbum) return <HomeView />;
 
@@ -1452,6 +1324,7 @@ const App = () => {
                     const rowCount = currentRow.length + 1;
                     const potentialRowHeight = (containerWidth - calculateGapWidth(rowCount)) / potentialAspect;
 
+                    // Условие для начала новой строки: если высота становится слишком маленькой (т.е. слишком много элементов в строке)
                     const shouldStartNewRow = currentRow.length > 0 && potentialRowHeight < TARGET_ROW_HEIGHT * 0.9; 
 
                     if (shouldStartNewRow) {
@@ -1474,19 +1347,27 @@ const App = () => {
 
         }, [allContent, containerWidth]);
 
+
         const isDraggingCurrent = (uniqueId) => isReorderMode && dragItemUniqueId.current === uniqueId;
         const isDragOverTarget = (uniqueId) => isReorderMode && dragOverItemUniqueId.current === uniqueId && dragItemUniqueId.current !== uniqueId;
 
+
         return (
             <div className="py-6 md:py-10 pt-4 md:pt-6"> 
+                
+                {/* --- БАННЕР РЕЖИМА РЕДАКТИРОВАНИЯ --- */}
+                {/* УДАЛЕНО по запросу пользователя */}
+                {/* ------------------------------------- */}
+
                 <div 
                     ref={albumRef}
                     className="w-full" 
-                    onDrop={isReorderMode && isAdmin ? handleDrop : undefined}
-                    onDragOver={isReorderMode && isAdmin ? handleDragOver : undefined}
+                    onDrop={isReorderMode && isAdmin ? handleDrop : undefined} // Только если режим активен
+                    onDragOver={isReorderMode && isAdmin ? handleDragOver : undefined} // Только если режим активен
                 >
                     {containerWidth === 0 && allContent.length > 0 && <CalculationSpinner />}
                     
+                    {/* Рендеринг Justified Gallery / Разделителей */}
                     {(containerWidth > 0 && justifiedRows.length > 0) && justifiedRows.map((rowWrapper) => {
                         const key = rowWrapper.uniqueId; 
 
@@ -1501,7 +1382,7 @@ const App = () => {
                                         ${isDraggingCurrent(divider.timestamp) ? 'opacity-50 border-2 border-indigo-500 scale-[0.98]' : ''}
                                         ${isDragOverTarget(divider.timestamp) ? 'border-2 border-dashed border-green-500' : ''}
                                     `}
-                                    draggable={isReorderMode && isAdmin}
+                                    draggable={isReorderMode && isAdmin} // ! Перетаскивание только для Admin
                                     onDragStart={isReorderMode && isAdmin ? (e) => handleDragStart(e, divider.timestamp) : undefined}
                                     onDragEnter={isReorderMode && isAdmin ? (e) => handleDragEnter(e, divider.timestamp) : undefined}
                                 >
@@ -1511,6 +1392,7 @@ const App = () => {
                                     </h2>
                                     <div className="w-full h-px bg-gray-300 mx-4 hidden sm:block"></div>
                                     
+                                    {/* ИНДИКАТОР ПЕРЕТАСКИВАНИЯ (Только для Admin) */}
                                     {isReorderMode && isAdmin && (
                                         <div 
                                             className="absolute top-1/2 left-2 transform -translate-y-1/2 bg-black/50 text-white p-1 rounded-full opacity-100 transition duration-200 cursor-grab z-20"
@@ -1519,7 +1401,8 @@ const App = () => {
                                             <GripVertical className="h-4 w-4" />
                                         </div>
                                     )}
-                                    {isDeleteMode && isAdmin && (
+                                     {/* КНОПКА УДАЛЕНИЯ РАЗДЕЛИТЕЛЯ (Только для Admin) */}
+                                     {isDeleteMode && isAdmin && (
                                         <button
                                             onClick={(e) => { 
                                                 e.stopPropagation(); 
@@ -1535,6 +1418,7 @@ const App = () => {
                             );
                         }
 
+                        // --- РЕНДЕР: РЯД ФОТОГРАФИЙ ---
                         const row = rowWrapper.content;
                         return (
                             <div
@@ -1550,6 +1434,7 @@ const App = () => {
                                             key={uniqueId} 
                                             onClick={!isDeleteMode && !isReorderMode ? () => setEnlargedImage(image) : undefined}
                                             
+                                            // Атрибуты Drag and Drop (Только для Admin)
                                             draggable={isReorderMode && isAdmin}
                                             onDragStart={isReorderMode && isAdmin ? (e) => handleDragStart(e, uniqueId) : undefined}
                                             onDragEnter={isReorderMode && isAdmin ? (e) => handleDragEnter(e, uniqueId) : undefined}
@@ -1577,6 +1462,7 @@ const App = () => {
                                                 }}
                                             />
                                             
+                                            {/* КНОПКА УДАЛЕНИЯ (Только для Admin) */}
                                             {isDeleteMode && isAdmin && (
                                                 <button
                                                     onClick={(e) => { 
@@ -1590,6 +1476,7 @@ const App = () => {
                                                 </button>
                                             )}
 
+                                            {/* ИНДИКАТОР ПЕРЕТАСКИВАНИЯ (Только для Admin) */}
                                             {isReorderMode && isAdmin && (
                                                 <div 
                                                     className="absolute top-1/2 left-2 transform -translate-y-1/2 bg-black/50 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition duration-200 cursor-grab z-20"
@@ -1604,7 +1491,9 @@ const App = () => {
                             </div>
                         );
                     })}
+
                 </div>
+
 
                 {allContent.length === 0 && (
                      <div className="mx-4 sm:mx-6 lg:mx-8 text-center py-20 bg-gray-50 rounded-xl mt-8 border border-dashed border-gray-300"> 
@@ -1627,69 +1516,41 @@ const App = () => {
     };
 
     // --- Вид: Главная страница (Список альбомов) ---
-    const HomeView = () => {
-        // Фильтрация: Админ видит всё, остальные только не скрытые
-        const visibleAlbums = isAdmin ? albums : albums.filter(a => !a.hidden);
-
-        return (
-            <div className="px-4 sm:px-6 lg:px-8 py-8">
-                <div className="flex justify-between items-center mb-8 border-b pb-2">
-                    <h2 className="text-3xl font-extrabold text-gray-900">Все альбомы</h2>
-                    
-                    {/* Кнопка сортировки альбомов */}
-                    {isAdmin && visibleAlbums.length > 1 && (
-                        <button 
-                            onClick={toggleAlbumReorderMode}
-                            className={`flex items-center px-3 py-1.5 text-sm font-medium rounded-lg transition ${
-                                isAlbumReorderMode 
-                                    ? 'bg-indigo-600 text-white shadow-lg ring-2 ring-offset-1 ring-indigo-500' 
-                                    : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
-                            }`}
-                        >
-                            <ArrowUpDown className="w-4 h-4 mr-2" />
-                            {isAlbumReorderMode ? 'Сохранить порядок' : 'Сортировать'}
-                        </button>
+    const HomeView = () => (
+        <div className="px-4 sm:px-6 lg:px-8 py-8">
+            <h2 className="text-3xl font-extrabold text-gray-900 mb-8 border-b pb-2">Все альбомы</h2>
+            
+            {albums.length === 0 ? (
+                <div className="text-center py-20 bg-white rounded-xl border border-dashed border-gray-300">
+                    <ImageIcon className="w-12 h-12 text-gray-400 mx-auto" />
+                    <h3 className="mt-2 text-lg font-medium text-gray-900">Альбомы не найдены</h3>
+                    {isAdmin && (
+                        <p className="mt-1 text-sm text-gray-500">
+                            Вы можете создать первый альбом.
+                        </p>
                     )}
                 </div>
-                
-                {visibleAlbums.length === 0 ? (
-                    <div className="text-center py-20 bg-white rounded-xl border border-dashed border-gray-300">
-                        <ImageIcon className="w-12 h-12 text-gray-400 mx-auto" />
-                        <h3 className="mt-2 text-lg font-medium text-gray-900">Нет доступных альбомов</h3>
-                        {isAdmin && (
-                            <p className="mt-1 text-sm text-gray-500">
-                                Вы можете создать первый альбом.
-                            </p>
-                        )}
-                    </div>
-                ) : (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-                        {visibleAlbums.map(album => (
-                            <AlbumCard key={album.id} album={album} />
-                        ))}
-                    </div>
-                )}
-
-                {/* Подсказка для режима сортировки */}
-                {isAlbumReorderMode && (
-                    <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 bg-indigo-900 text-white px-6 py-3 rounded-full shadow-xl z-50 animate-bounce">
-                        Перетаскивайте альбомы, чтобы изменить их порядок
-                    </div>
-                )}
-            </div>
-        );
-    };
-
+            ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                    {albums.map(album => (
+                        <AlbumCard key={album.id} album={album} />
+                    ))}
+                </div>
+            )}
+        </div>
+    );
     // --- Общий рендеринг ---
+
+    // Увеличение, чтобы отобразить критические ошибки
     if (error && error.isCritical) {
         return (
             <div className="flex items-center justify-center min-h-screen bg-gray-100 p-4">
-                <div className="bg-red-100 border-l-4 border-red-500 p-6 rounded-xl text-red-900 shadow-2xl max-w-lg">
-                    <h1 className="text-2xl font-bold mb-3">{error.name}</h1>
-                    <p className="text-red-800 whitespace-pre-wrap">{error.message}</p>
-                    <p className="mt-4 text-sm font-semibold">Пожалуйста, убедитесь, что переменные Firebase правильно настроены.</p>
-                </div>
-            </div>
+                <div className="bg-red-100 border-l-4 border-red-500 p-6 rounded-xl text-red-900 shadow-2xl max-w-lg">
+                    <h1 className="text-2xl font-bold mb-3">{error.name}</h1>
+                    <p className="text-red-800 whitespace-pre-wrap">{error.message}</p>
+                    <p className="mt-4 text-sm font-semibold">Пожалуйста, убедитесь, что переменные Firebase правильно настроены.</p>
+                </div>
+            </div>
         );
     }
     
@@ -1698,6 +1559,7 @@ const App = () => {
     }
 
     if (error && !error.isCritical) {
+        // Рендеринг для некритической ошибки (например, не удалось загрузить альбом или ошибка аутентификации)
         return (
             <div className="p-8 text-center text-red-600 bg-red-100 rounded-xl m-10">
                 <strong>{error.name || 'Ошибка'}:</strong> {error.message || 'Произошла неизвестная ошибка.'}
@@ -1712,6 +1574,7 @@ const App = () => {
                 @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
                 .animate-fade-in-up { animation: fadeInUp 0.3s ease-out; }
             
+                /* --- Стили для модала изображения --- */
                 .text-with-shadow {
                   color: white;
                   text-shadow: 
@@ -1757,6 +1620,8 @@ const App = () => {
                   padding-right: 0.5rem; 
                 }
                 
+                /* Глобальные стили для сброса и обеспечения корректной работы */
+                /* Это может помочь, если внешний CSS не загружается */
                 body { margin: 0; padding: 0; box-sizing: border-box; }
                 .min-h-screen { min-height: 100vh; }
                 .fixed { position: fixed; }
@@ -1771,9 +1636,11 @@ const App = () => {
                 .z-70 { z-index: 70; }
             `}</style>
             
+            {/* Header / Top Bar */}
             <header className="bg-white shadow-md sticky top-0 z-10">
                 <div className="px-4 sm:px-6 lg:px-8 py-3 flex justify-between items-center">
                     
+                    {/* ЛЕВАЯ ЧАСТЬ: Логотип + Навигация по альбому */}
                     <div className="flex items-center">
                         <div className="flex items-center">
                             <span className="text-2xl mr-2" role="img" aria-label="Иконка льва">
@@ -1798,7 +1665,10 @@ const App = () => {
                         )}
                     </div>
                     
+                    {/* ПРАВАЯ ЧАСТЬ: Кнопки действий */}
                     <div className="flex items-center space-x-3">
+
+                        {/* --- КНОПКИ РЕЖИМОВ РЕДАКТИРОВАНИЯ (Только в режиме альбома И для Admin) --- */}
                         {isAdmin && currentView === 'album' && selectedAlbum && (
                             <>
                                 <button
@@ -1834,6 +1704,8 @@ const App = () => {
                             </>
                         )}
 
+
+                        {/* --- КНОПКИ ДОБАВЛЕНИЯ (Только для Admin) --- */}
                         {isAdmin && (
                             <>
                                 <button
@@ -1854,6 +1726,7 @@ const App = () => {
                             </>
                         )}
                         
+                        {/* --- КНОПКА АДМИНА (Login/Logout) --- */}
                         {!isAdmin && (
                             <button
                                 onClick={() => setIsLoginModalOpen(true)}
@@ -1864,7 +1737,7 @@ const App = () => {
                                 Админ Вход
                             </button>
                         )}
-                        {isAdmin && (
+                         {isAdmin && (
                             <button
                                 onClick={handleAdminLogout}
                                 className="flex items-center px-4 py-2 border border-red-300 text-sm font-medium rounded-full text-red-700 bg-red-100 hover:bg-red-200 transition shadow-sm"
@@ -1878,17 +1751,19 @@ const App = () => {
                 </div>
             </header>
 
+            {/* Main Content */}
             <main className="pb-12">
                 {currentView === 'home' ? <HomeView /> : <AlbumPhotoView />}
             </main>
 
+            {/* Modals */}
             <AdminLoginModal /> 
             <RenameAlbumModal />
             <AddAlbumModal />
             <AddPhotoModal />
             <AddDividerModal /> 
-            <DeleteAlbumConfirmModal />
             
+            {/* Модал: Увеличенное изображение с редактированием подписи */}
             <ImageModal 
                 image={enlargedImage} 
                 onClose={() => setEnlargedImage(null)} 
@@ -1898,6 +1773,7 @@ const App = () => {
                 onPrev={handlePrevImage}
                 isAdmin={isAdmin} 
             />
+
         </div>
     );
 };
