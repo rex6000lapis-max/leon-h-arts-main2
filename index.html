@@ -38,11 +38,9 @@
         collection, 
         query, 
         addDoc, 
-        updateDoc,
-        deleteDoc,
+        updateDoc, 
         arrayUnion, 
-        serverTimestamp,
-        writeBatch
+        serverTimestamp 
     } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
     
     // --- Экспортируем всё в window, чтобы React-скрипт мог обращаться ---
@@ -60,10 +58,8 @@
     window.query = query;
     window.addDoc = addDoc;
     window.updateDoc = updateDoc;
-    window.deleteDoc = deleteDoc;
     window.arrayUnion = arrayUnion;
     window.serverTimestamp = serverTimestamp;
-    window.writeBatch = writeBatch;
 
     // --- Глобальные переменные для оффлайн-режима ---
     if (typeof window.__app_id === 'undefined') window.__app_id = 'default-app-id';
@@ -149,7 +145,7 @@
     <script type="text/babel">
         // Получаем глобальные переменные, предоставленные Canvas
         const {useState, useEffect, useCallback, useMemo, useRef , useLayoutEffect} = React;
-        const { initializeApp, getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged, getFirestore, doc, onSnapshot, collection, query, addDoc, updateDoc, deleteDoc, arrayUnion, serverTimestamp, writeBatch } = window;
+        const { initializeApp, getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged, getFirestore, doc, onSnapshot, collection, query, addDoc, updateDoc, arrayUnion, serverTimestamp } = window;
 
         // --- Встроенные React SVG компоненты (замена lucide-react) ---
         const Icon = ({ children, size = 24, className = '', ...props }) => (
@@ -211,15 +207,6 @@
         );
         const AlertTriangle = (props) => (
              <Icon {...props}><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" /><line x1="12" x2="12" y1="9" y2="13" /><line x1="12" x2="12" y1="17" y2="17" /></Icon>
-        );
-        const Eye = (props) => (
-            <Icon {...props}><circle cx="12" cy="12" r="3" /><path d="M21 12c0 4.97-4.03 9-9 9s-9-4.03-9-9 4.03-9 9-9 9 4.03 9 9z" /></Icon>
-        );
-        const EyeOff = (props) => (
-            <Icon {...props}><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-4.97 0-9-4.03-9-9 0-2.12.74-4.07 1.97-5.61l-2.24-2.24 1.41-1.41 16.97 16.97-1.41 1.41-2.76-2.76z" /><path d="M14.12 14.12a3 3 0 1 1-4.24-4.24" /><path d="M12 17.5c2.33 0 4.31-1.46 5.11-3.5a9.68 9.68 0 0 0 .61-2 9.68 9.68 0 0 0-.61-2c-.8-2.04-2.78-3.5-5.11-3.5a5.5 5.5 0 0 0-2.65.67l2.47 2.47a3 3 0 0 1 4.24 4.24l2.46 2.46c-.34.28-.7.52-1.08.72z" /></Icon>
-        );
-        const LogOut = (props) => (
-            <Icon {...props}><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><polyline points="16 17 21 12 16 7" /><line x1="21" y1="12" x2="9" y2="12" /></Icon>
         );
 
         // --- КОНСТАНТЫ И НАСТРОЙКИ ---
@@ -442,12 +429,6 @@
             const [selectedAlbum, setSelectedAlbum] = useState(null);
             const [isDeleteMode, setIsDeleteMode] = useState(false);
             const [isReorderMode, setIsReorderMode] = useState(false);
-            
-            // НОВЫЕ СОСТОЯНИЯ ДЛЯ УПРАВЛЕНИЯ АЛЬБОМАМИ
-            const [isAlbumReorderMode, setIsAlbumReorderMode] = useState(false);
-            const [albumToDelete, setAlbumToDelete] = useState(null);
-            const [deleteStep, setDeleteStep] = useState(0);
-            
             const [isAddAlbumModalOpen, setIsAddAlbumModalOpen] = useState(false);
             const [isAddPhotoModalOpen, setIsAddPhotoModalOpen] = useState(false);
             const [isAddDividerModalOpen, setIsAddDividerModalOpen] = useState(false);
@@ -525,9 +506,8 @@
                 if (!isAdmin) return;
                 saveScrollPosition();
                 setIsDeleteMode(prev => !prev);
-                if (!isDeleteMode) { 
+                if (!isDeleteMode) {
                     setIsReorderMode(false);
-                    setIsAlbumReorderMode(false);
                 }
                 // Восстанавливаем позицию после изменения состояния
                 setTimeout(() => {
@@ -539,9 +519,8 @@
                 if (!isAdmin) return;
                 saveScrollPosition();
                 setIsReorderMode(prev => !prev);
-                if (!isReorderMode) { 
+                if (!isReorderMode) {
                     setIsDeleteMode(false);
-                    setIsAlbumReorderMode(false);
                 }
                 // Восстанавливаем позицию после изменения состояния
                 setTimeout(() => {
@@ -586,17 +565,8 @@
                 const unsubscribe = onAuthStateChanged(auth, (user) => {
                     if (user) {
                         setUserId(user.uid);
-                        if (user.uid === ADMIN_UID) {
-                            setIsAdmin(true);
-                            localStorage.setItem('isAdmin', 'true');
-                        } else {
-                            setIsAdmin(false);
-                            localStorage.removeItem('isAdmin');
-                        }
                     } else {
                         setUserId(null);
-                        setIsAdmin(false);
-                        localStorage.removeItem('isAdmin');
                     }
                     setAuthReady(true);
                 });
@@ -610,7 +580,6 @@
                 if (!isAdmin) {
                     setIsDeleteMode(false);
                     setIsReorderMode(false);
-                    setIsAlbumReorderMode(false);
                 }
             }, [isAdmin]);
 
@@ -640,27 +609,6 @@
                 }
             };
 
-            const handleAdminLogout = async () => {
-                if (!auth) return;
-                try {
-                    await signOut(auth);
-                    if (initialAuthToken) {
-                        await signInWithCustomToken(auth, initialAuthToken);
-                    } else {
-                        await signInAnonymously(auth);
-                    }
-                    setIsAdmin(false);
-                    localStorage.removeItem('isAdmin');
-                    setIsDeleteMode(false);
-                    setIsReorderMode(false);
-                    setIsAlbumReorderMode(false);
-                    alertUser('Выход', 'Вы успешно вышли из режима администратора.');
-                } catch (e) {
-                    console.error("Ошибка выхода:", e);
-                    alertUser('Ошибка', 'Не удалось выйти из системы.');
-                }
-            };
-
             // Функции навигации в модальном окне
             const handleNavigation = useCallback((direction) => {
                 if (!enlargedImage || !selectedAlbum) return;
@@ -687,33 +635,23 @@
             const handleNextImage = useCallback(() => handleNavigation('next'), [handleNavigation]);
             const handlePrevImage = useCallback(() => handleNavigation('prev'), [handleNavigation]);
 
-            // НОВАЯ ФУНКЦИЯ: Переключение режима сортировки альбомов
-            const toggleAlbumReorderMode = useCallback(() => {
-                if (!isAdmin) return;
-                setIsAlbumReorderMode(prev => !prev);
-                setAlbumToDelete(null);
-            }, [isAdmin]);
-
             const handleGoHome = useCallback(() => {
                 saveScrollPosition();
                 setSelectedAlbum(null);
                 setCurrentView('home');
-                setIsDeleteMode(false); 
+                setIsDeleteMode(false);
                 setIsReorderMode(false);
-                setIsAlbumReorderMode(false);
                 restoreScrollPosition();
             }, []);
 
             const handleOpenAlbum = useCallback((album) => {
-                if (isAlbumReorderMode) return;
                 saveScrollPosition();
                 setSelectedAlbum(album);
                 setCurrentView('album');
-                setIsDeleteMode(false); 
+                setIsDeleteMode(false);
                 setIsReorderMode(false);
-                setIsAlbumReorderMode(false);
                 restoreScrollPosition();
-            }, [isAlbumReorderMode]);
+            }, []);
 
             const alertUser = (title, message) => {
                 console.warn(`[ВНИМАНИЕ ${title}]: ${message}`);
@@ -753,14 +691,7 @@
                             fetchedAlbums.push({ id: doc.id, ...data, images });
                         });
                         
-                        // НОВАЯ ЛОГИКА СОРТИРОВКИ: сначала по orderIndex, затем по дате
-                        fetchedAlbums.sort((a, b) => {
-                            const orderA = a.orderIndex !== undefined ? a.orderIndex : Number.MAX_SAFE_INTEGER;
-                            const orderB = b.orderIndex !== undefined ? b.orderIndex : Number.MAX_SAFE_INTEGER;
-                            
-                            if (orderA !== orderB) return orderA - orderB;
-                            return (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0);
-                        });
+                        fetchedAlbums.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
 
                         setAlbums(fetchedAlbums);
                         setLoading(false);
@@ -793,53 +724,6 @@
             }, [userId, authReady, currentView]);
 
             // --- 3. CRUD-функции (Только для Администратора) ---
-            
-            // НОВЫЕ ФУНКЦИИ ДЛЯ УПРАВЛЕНИЯ АЛЬБОМАМИ
-            const initiateDeleteAlbum = (album) => {
-                if (!isAdmin) return;
-                setAlbumToDelete(album);
-                setDeleteStep(1);
-            };
-
-            const confirmDeleteAlbum = async () => {
-                if (!albumToDelete || !isAdmin) return;
-
-                if (deleteStep === 1) {
-                    setDeleteStep(2);
-                    return;
-                }
-
-                if (deleteStep === 2) {
-                    try {
-                        const collectionPath = `artifacts/${appId}/public/data/${PUBLIC_COLLECTION_NAME}`;
-                        await deleteDoc(doc(db, collectionPath, albumToDelete.id));
-                        console.log(`Альбом ${albumToDelete.name} удален.`);
-                        setAlbumToDelete(null);
-                        setDeleteStep(0);
-                    } catch (e) {
-                        console.error("Ошибка удаления альбома:", e);
-                        alertUser('Ошибка', 'Не удалось удалить альбом.');
-                    }
-                }
-            };
-
-            const cancelDeleteAlbum = () => {
-                setAlbumToDelete(null);
-                setDeleteStep(0);
-            };
-
-            const toggleAlbumVisibility = async (album) => {
-                if (!isAdmin) return;
-                try {
-                    const collectionPath = `artifacts/${appId}/public/data/${PUBLIC_COLLECTION_NAME}`;
-                    await updateDoc(doc(db, collectionPath, album.id), {
-                        hidden: !album.hidden
-                    });
-                } catch (e) {
-                    console.error("Ошибка обновления видимости:", e);
-                    alertUser('Ошибка', 'Не удалось изменить видимость.');
-                }
-            };
             
             const renameAlbum = async (albumId, newName) => {
                 if (!isAdmin) {
@@ -946,60 +830,6 @@
                     console.error("Ошибка при удалении элемента:", e);
                     alertUser('Ошибка', 'Не удалось удалить элемент.');
                 }
-            };
-
-            // --- DRAG AND DROP ДЛЯ АЛЬБОМОВ ---
-            const handleAlbumDragStart = (e, albumId) => {
-                if (!isAlbumReorderMode || !isAdmin) return;
-                dragItemUniqueId.current = albumId;
-                e.dataTransfer.effectAllowed = "move";
-            };
-
-            const handleAlbumDragEnter = (e, albumId) => {
-                if (!isAlbumReorderMode || !isAdmin) return;
-                dragOverItemUniqueId.current = albumId;
-            };
-
-            const handleAlbumDrop = async () => {
-                if (!isAlbumReorderMode || !isAdmin) return;
-                
-                const draggedId = dragItemUniqueId.current;
-                const targetId = dragOverItemUniqueId.current;
-                
-                if (!draggedId || !targetId || draggedId === targetId) {
-                    dragItemUniqueId.current = null; dragOverItemUniqueId.current = null;
-                    return;
-                }
-
-                const newAlbums = [...albums];
-                const draggedIndex = newAlbums.findIndex(a => a.id === draggedId);
-                const targetIndex = newAlbums.findIndex(a => a.id === targetId);
-
-                if (draggedIndex === -1 || targetIndex === -1) return;
-
-                const [movedAlbum] = newAlbums.splice(draggedIndex, 1);
-                newAlbums.splice(targetIndex, 0, movedAlbum);
-
-                setAlbums(newAlbums);
-
-                try {
-                    const batch = writeBatch(db);
-                    const collectionPath = `artifacts/${appId}/public/data/${PUBLIC_COLLECTION_NAME}`;
-                    
-                    newAlbums.forEach((album, index) => {
-                        const ref = doc(db, collectionPath, album.id);
-                        batch.update(ref, { orderIndex: index });
-                    });
-                    
-                    await batch.commit();
-                    console.log("Порядок альбомов обновлен");
-                } catch (e) {
-                    console.error("Ошибка сохранения порядка альбомов:", e);
-                    alertUser('Ошибка', 'Не удалось сохранить порядок.');
-                }
-
-                dragItemUniqueId.current = null;
-                dragOverItemUniqueId.current = null;
             };
 
             const handleDragStart = useCallback((e, uniqueId) => {
@@ -1128,18 +958,15 @@
                     return;
                 }
 
+                const albumData = {
+                    name: name.trim(),
+                    createdAt: serverTimestamp(),
+                    images: [],
+                    previewUrl: null
+                };
                 try {
                     const collectionPath = `artifacts/${appId}/public/data/${PUBLIC_COLLECTION_NAME}`;
-                    // Добавляем orderIndex в конец списка
-                    const maxOrderIndex = albums.length > 0 ? Math.max(...albums.map(a => a.orderIndex || 0)) : 0;
-                    
-                    await addDoc(collection(db, collectionPath), {
-                        name: name.trim(),
-                        createdAt: serverTimestamp(),
-                        images: [], 
-                        hidden: false,
-                        orderIndex: maxOrderIndex + 1
-                    });
+                    await addDoc(collection(db, collectionPath), albumData);
                     setIsAddAlbumModalOpen(false);
                     console.log(`Альбом "${name}" создан.`);
                 } catch (e) {
@@ -1188,87 +1015,41 @@
                 const previewUrl = firstPhoto ? firstPhoto.url : null;
                 const imageCount = album.images.filter(item => item.type !== 'divider').length;
                 
-                const opacityClass = album.hidden ? 'opacity-60 grayscale' : 'opacity-100';
-                const hiddenBadge = album.hidden ? (
-                    <div className="absolute top-2 left-2 bg-black/60 text-white px-2 py-1 rounded text-xs flex items-center">
-                        <EyeOff size={12} className="mr-1"/> Скрыт
-                    </div>
-                ) : null;
-
-                const isDragging = isAlbumReorderMode && dragItemUniqueId.current === album.id;
-                const isDragOver = isAlbumReorderMode && dragOverItemUniqueId.current === album.id;
-
                 return (
-                    <div 
-                        className={`
-                            relative group transition-all duration-200
-                            ${isAlbumReorderMode ? 'cursor-move' : ''}
-                            ${isDragging ? 'opacity-20 scale-95' : ''}
-                            ${isDragOver ? 'transform scale-105' : ''}
-                        `}
-                        draggable={isAlbumReorderMode && isAdmin}
-                        onDragStart={(e) => handleAlbumDragStart(e, album.id)}
-                        onDragEnter={(e) => handleAlbumDragEnter(e, album.id)}
-                        onDragOver={(e) => e.preventDefault()}
-                        onDrop={handleAlbumDrop}
-                    >
+                    <div className="relative">
                         <div 
-                            onClick={() => !isAlbumReorderMode && handleOpenAlbum(album)}
-                            className={`bg-white rounded-xl shadow-lg hover:shadow-xl transition-all overflow-hidden cursor-pointer h-full flex flex-col ${opacityClass} ${isDragOver ? 'ring-2 ring-indigo-500' : ''}`}
+                            onClick={() => handleOpenAlbum(album)}
+                            className="bg-white rounded-xl shadow-lg hover:shadow-xl transition-shadow cursor-pointer overflow-hidden transform hover:scale-[1.02] active:scale-100 duration-200 ease-in-out"
                         >
-                            <div className="w-full h-48 bg-gray-200 flex items-center justify-center relative flex-shrink-0">
+                            <div className="w-full h-full bg-gray-200 flex items-center justify-center relative">
                                 {previewUrl ? (
                                     <img 
                                         src={previewUrl} 
-                                        alt={album.name} 
+                                        alt={`Превью ${album.name}`} 
                                         className="w-full h-full object-cover"
                                         onError={(e) => { e.target.onerror = null; e.target.src = "https://placehold.co/600x400/CCCCCC/333333?text=Ошибка+загрузки"; }}
                                     />
                                 ) : (
                                     <ImageIcon className="w-1/3 h-1/3 text-gray-500" />
                                 )}
-                                {hiddenBadge}
-                                {!isAlbumReorderMode && (
-                                    <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-10 transition-all duration-300" />
-                                )}
                             </div>
-                            
-                            <div className="p-4 flex-grow relative">
-                                <h3 className="font-semibold text-lg text-gray-800 truncate pr-8" title={album.name}>{album.name}</h3>
+                            <div className="p-4">
+                                <h3 className="font-semibold text-lg text-gray-800 truncate" title={album.name}>{album.name}</h3>
                                 <p className="text-sm text-gray-500 mt-1">{imageCount} {imageCount === 1 ? 'фото' : (imageCount > 1 && imageCount < 5 ? 'фото' : 'фотографий')}</p>
                             </div>
                         </div>
                         
-                        {/* КНОПКИ УПРАВЛЕНИЯ АЛЬБОМОМ (Только Админ) */}
-                        {isAdmin && !isAlbumReorderMode && (
-                            <div className="absolute top-2 right-2 flex flex-col space-y-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
-                                {/* Редактировать имя */}
-                                <button
-                                    onClick={(e) => { e.stopPropagation(); handleOpenRenameModal(album); }}
-                                    className="p-1.5 bg-white rounded-full shadow-md text-gray-700 hover:text-indigo-600 hover:bg-gray-50"
-                                    title="Переименовать"
-                                >
-                                    <Edit size={16} />
-                                </button>
-                                
-                                {/* Скрыть/Показать */}
-                                <button
-                                    onClick={(e) => { e.stopPropagation(); toggleAlbumVisibility(album); }}
-                                    className={`p-1.5 bg-white rounded-full shadow-md hover:bg-gray-50 ${album.hidden ? 'text-indigo-600' : 'text-gray-500'}`}
-                                    title={album.hidden ? "Сделать публичным" : "Скрыть альбом"}
-                                >
-                                    {album.hidden ? <Eye size={16} /> : <EyeOff size={16} />}
-                                </button>
-
-                                {/* Удалить */}
-                                <button
-                                    onClick={(e) => { e.stopPropagation(); initiateDeleteAlbum(album); }}
-                                    className="p-1.5 bg-white rounded-full shadow-md text-red-500 hover:text-red-700 hover:bg-red-50"
-                                    title="Удалить альбом"
-                                >
-                                    <Trash2 size={16} />
-                                </button>
-                            </div>
+                        {isAdmin && (
+                            <button
+                                onClick={(e) => { 
+                                    e.stopPropagation(); 
+                                    handleOpenRenameModal(album);
+                                }}
+                                className="absolute top-2 right-2 p-1 bg-white rounded-full shadow-lg text-indigo-600 hover:bg-indigo-50 transition"
+                                title="Переименовать альбом"
+                            >
+                                <Edit className="h-4 w-4" />
+                            </button>
                         )}
                     </div>
                 );
@@ -1304,43 +1085,6 @@
                                 </button>
                             </div>
                             {children}
-                        </div>
-                    </div>
-                );
-            };
-
-            // НОВЫЙ КОМПОНЕНТ: Модальное окно подтверждения удаления альбома
-            const DeleteAlbumConfirmModal = () => {
-                if (!albumToDelete) return null;
-
-                return (
-                    <div className="fixed inset-0 z-[100] bg-black bg-opacity-60 flex justify-center items-center p-4">
-                        <div className="bg-white rounded-xl shadow-2xl w-full max-w-sm p-6 text-center animate-fade-in-up">
-                            <div className="mb-4 flex justify-center text-red-500">
-                                <AlertTriangle size={48} />
-                            </div>
-                            
-                            {deleteStep === 1 && (
-                                <>
-                                    <h3 className="text-xl font-bold text-gray-800 mb-2">Удалить альбом?</h3>
-                                    <p className="text-gray-600 mb-6">Вы хотите удалить альбом <b>"{albumToDelete.name}"</b>?</p>
-                                    <div className="flex justify-center space-x-3">
-                                        <button onClick={cancelDeleteAlbum} className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200">Отмена</button>
-                                        <button onClick={confirmDeleteAlbum} className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">Да, удалить</button>
-                                    </div>
-                                </>
-                            )}
-
-                            {deleteStep === 2 && (
-                                <>
-                                    <h3 className="text-xl font-bold text-red-600 mb-2">Вы абсолютно уверены?</h3>
-                                    <p className="text-gray-600 mb-6">Это действие <b>нельзя отменить</b>. Все фотографии в этом альбоме будут потеряны.</p>
-                                    <div className="flex justify-center space-x-3">
-                                        <button onClick={cancelDeleteAlbum} className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200">Нет, оставить</button>
-                                        <button onClick={confirmDeleteAlbum} className="px-4 py-2 bg-red-700 text-white rounded-lg hover:bg-red-800 shadow-lg font-bold">ДА, УДАЛИТЬ НАВСЕГДА</button>
-                                    </div>
-                                </>
-                            )}
                         </div>
                     </div>
                 );
@@ -1642,7 +1386,6 @@
                 );
             };
             
-            // Вид: Сетка фото в альбоме
             const AlbumPhotoView = ({ onOpenImage }) => {
                 if (!selectedAlbum) return <HomeView />;
 
@@ -1672,74 +1415,344 @@
                     if (containerWidth <= 0) return [];
                     
                     const rows = [];
-                    let currentRow = [];
-                    let currentRowTotalAspect = 0; 
                     
                     const calculateGapWidth = (count) => (count - 1) * GALLERY_GAP_PX;
 
-                    const finalizePhotoRow = (row, isLastRow = false) => {
-                        if (row.length === 0) return;
-
-                        const rowGapWidth = calculateGapWidth(row.length);
-                        const rowContainerWidth = containerWidth - rowGapWidth;
-                        const totalAspect = row.reduce((sum, img) => sum + img.aspectRatio, 0);
-
-                        let finalRowHeight = rowContainerWidth / totalAspect;
+                    // УЛУЧШЕННАЯ функция для оптимального распределения фото
+                    const distributePhotosOptimally = (photos, targetHeight, containerWidth) => {
+                        if (photos.length === 0) return [];
                         
-                        if (!isLastRow) {
-                            const maxHeight = TARGET_ROW_HEIGHT * MAX_ROW_HEIGHT_MULTIPLIER;
-                            if (finalRowHeight > maxHeight) {
-                                finalRowHeight = maxHeight; 
+                        const rows = [];
+                        
+                        // Основной алгоритм распределения
+                        let startIndex = 0;
+                        
+                        while (startIndex < photos.length) {
+                            let bestRow = [photos[startIndex]];
+                            let bestCost = calculateRowCost(bestRow, targetHeight, containerWidth);
+                            
+                            // Пробуем добавлять фото в ряд
+                            for (let endIndex = startIndex + 1; endIndex <= Math.min(startIndex + 10, photos.length); endIndex++) {
+                                const candidateRow = photos.slice(startIndex, endIndex + 1);
+                                const candidateCost = calculateRowCost(candidateRow, targetHeight, containerWidth);
+                                
+                                if (candidateCost < bestCost) {
+                                    bestRow = candidateRow;
+                                    bestCost = candidateCost;
+                                } else {
+                                    break;
+                                }
                             }
-                        } else {
-                            if (finalRowHeight > TARGET_ROW_HEIGHT * 1.2) {
-                                finalRowHeight = TARGET_ROW_HEIGHT;
+                            
+                            // Рассчитываем финальную высоту для выбранного ряда
+                            const totalAspect = bestRow.reduce((sum, img) => sum + img.aspectRatio, 0);
+                            const gapWidth = calculateGapWidth(bestRow.length);
+                            const finalHeight = Math.min(
+                                (containerWidth - gapWidth) / totalAspect,
+                                TARGET_ROW_HEIGHT * MAX_ROW_HEIGHT_MULTIPLIER
+                            );
+                            
+                            const minAllowedHeight = startIndex + bestRow.length >= photos.length ? 
+                                TARGET_ROW_HEIGHT * 0.5 : 
+                                TARGET_ROW_HEIGHT * 0.7;
+                            
+                            const clampedHeight = Math.max(finalHeight, minAllowedHeight);
+                            
+                            rows.push({
+                                photos: bestRow,
+                                height: clampedHeight
+                            });
+                            
+                            startIndex += bestRow.length;
+                        }
+                        
+                        // === УЛУЧШЕННАЯ ПОСТ-ОБРАБОТКА: Оптимизация последних рядов ===
+                        if (rows.length >= 2) {
+                            const lastRow = rows[rows.length - 1];
+                            const secondLastRow = rows[rows.length - 2];
+                            
+                            // Рассчитываем ширину последнего ряда
+                            const lastRowTotalWidth = lastRow.photos.reduce((sum, img) => sum + img.aspectRatio * lastRow.height, 0) + 
+                                                    calculateGapWidth(lastRow.photos.length);
+                            
+                            const lastRowFillRatio = lastRowTotalWidth / containerWidth;
+                            
+                            // СЛУЧАЙ 1: Если в последнем ряду 2 или меньше фото - ВСЕГДА объединяем с предпоследним
+                            if (lastRow.photos.length < 3) {
+                                const mergedPhotos = [...secondLastRow.photos, ...lastRow.photos];
+                                const totalAspect = mergedPhotos.reduce((sum, img) => sum + img.aspectRatio, 0);
+                                const gapWidth = calculateGapWidth(mergedPhotos.length);
+                                
+                                // Пересчитываем высоту объединенного ряда
+                                const newHeight = Math.min(
+                                    (containerWidth - gapWidth) / totalAspect,
+                                    TARGET_ROW_HEIGHT * MAX_ROW_HEIGHT_MULTIPLIER
+                                );
+                                
+                                // Проверяем, что новая высота не слишком маленькая
+                                if (newHeight >= TARGET_ROW_HEIGHT * 0.4) {
+                                    rows[rows.length - 2] = {
+                                        photos: mergedPhotos,
+                                        height: newHeight
+                                    };
+                                    rows.pop();
+                                }
+                            }
+                            // СЛУЧАЙ 2: Если в последнем ряду 3 фото и они заполняют меньше 95% ширины
+                            else if (lastRow.photos.length === 3 && lastRowFillRatio < 0.95) {
+                                // АГРЕССИВНО: Пробуем переместить от 1 до 3 фото из предпоследнего ряда
+                                let bestMoveCount = 0;
+                                let bestNewFillRatio = lastRowFillRatio;
+                                let bestNewSecondLastHeight = secondLastRow.height;
+                                let bestNewLastHeight = lastRow.height;
+                                
+                                for (let moveCount = 1; moveCount <= Math.min(3, secondLastRow.photos.length - 1); moveCount++) {
+                                    const newSecondLastPhotos = secondLastRow.photos.slice(0, -moveCount);
+                                    const newLastPhotos = [...secondLastRow.photos.slice(-moveCount), ...lastRow.photos];
+                                    
+                                    // Пересчитываем высоты
+                                    const newSecondLastAspect = newSecondLastPhotos.reduce((sum, img) => sum + img.aspectRatio, 0);
+                                    const newLastAspect = newLastPhotos.reduce((sum, img) => sum + img.aspectRatio, 0);
+                                    
+                                    const newSecondLastGap = calculateGapWidth(newSecondLastPhotos.length);
+                                    const newLastGap = calculateGapWidth(newLastPhotos.length);
+                                    
+                                    const newSecondLastHeight = Math.min(
+                                        (containerWidth - newSecondLastGap) / newSecondLastAspect,
+                                        TARGET_ROW_HEIGHT * MAX_ROW_HEIGHT_MULTIPLIER
+                                    );
+                                    
+                                    const newLastHeight = Math.min(
+                                        (containerWidth - newLastGap) / newLastAspect,
+                                        TARGET_ROW_HEIGHT * MAX_ROW_HEIGHT_MULTIPLIER
+                                    );
+                                    
+                                    // Проверяем минимальные высоты
+                                    if (newSecondLastHeight >= TARGET_ROW_HEIGHT * 0.45 && newLastHeight >= TARGET_ROW_HEIGHT * 0.45) {
+                                        // Рассчитываем новое заполнение последнего ряда
+                                        const newLastRowWidth = newLastPhotos.reduce((sum, img) => sum + img.aspectRatio * newLastHeight, 0) + 
+                                                              calculateGapWidth(newLastPhotos.length);
+                                        const newLastRowFillRatio = newLastRowWidth / containerWidth;
+                                        
+                                        // Выбираем вариант с лучшим заполнением
+                                        if (newLastRowFillRatio > bestNewFillRatio) {
+                                            bestMoveCount = moveCount;
+                                            bestNewFillRatio = newLastRowFillRatio;
+                                            bestNewSecondLastHeight = newSecondLastHeight;
+                                            bestNewLastHeight = newLastHeight;
+                                        }
+                                    }
+                                }
+                                
+                                // Если нашли хорошее перераспределение, применяем его
+                                if (bestMoveCount > 0 && bestNewFillRatio > lastRowFillRatio + 0.1) {
+                                    const newSecondLastPhotos = secondLastRow.photos.slice(0, -bestMoveCount);
+                                    const newLastPhotos = [...secondLastRow.photos.slice(-bestMoveCount), ...lastRow.photos];
+                                    
+                                    rows[rows.length - 2] = {
+                                        photos: newSecondLastPhotos,
+                                        height: bestNewSecondLastHeight
+                                    };
+                                    rows[rows.length - 1] = {
+                                        photos: newLastPhotos,
+                                        height: bestNewLastHeight
+                                    };
+                                }
+                            }
+                            // СЛУЧАЙ 3: Если в последнем ряду больше 3 фото, но все равно мало заполнен (менее 85%)
+                            else if (lastRow.photos.length > 3 && lastRowFillRatio < 0.85 && secondLastRow.photos.length >= 4) {
+                                // АГРЕССИВНО: Пробуем переместить 1-2 фото из предпоследнего ряда
+                                for (let moveCount = 1; moveCount <= 2; moveCount++) {
+                                    if (secondLastRow.photos.length - moveCount < 2) break;
+                                    
+                                    const newSecondLastPhotos = secondLastRow.photos.slice(0, -moveCount);
+                                    const newLastPhotos = [...secondLastRow.photos.slice(-moveCount), ...lastRow.photos];
+                                    
+                                    const newSecondLastAspect = newSecondLastPhotos.reduce((sum, img) => sum + img.aspectRatio, 0);
+                                    const newLastAspect = newLastPhotos.reduce((sum, img) => sum + img.aspectRatio, 0);
+                                    
+                                    const newSecondLastGap = calculateGapWidth(newSecondLastPhotos.length);
+                                    const newLastGap = calculateGapWidth(newLastPhotos.length);
+                                    
+                                    const newSecondLastHeight = Math.min(
+                                        (containerWidth - newSecondLastGap) / newSecondLastAspect,
+                                        TARGET_ROW_HEIGHT * MAX_ROW_HEIGHT_MULTIPLIER
+                                    );
+                                    
+                                    const newLastHeight = Math.min(
+                                        (containerWidth - newLastGap) / newLastAspect,
+                                        TARGET_ROW_HEIGHT * MAX_ROW_HEIGHT_MULTIPLIER
+                                    );
+                                    
+                                    // Проверяем, что улучшилось заполнение
+                                    const newLastRowWidth = newLastPhotos.reduce((sum, img) => sum + img.aspectRatio * newLastHeight, 0) + 
+                                                          calculateGapWidth(newLastPhotos.length);
+                                    const newLastRowFillRatio = newLastRowWidth / containerWidth;
+                                    
+                                    if (newLastRowFillRatio > lastRowFillRatio + 0.15 && 
+                                        newSecondLastHeight >= TARGET_ROW_HEIGHT * 0.4 && 
+                                        newLastHeight >= TARGET_ROW_HEIGHT * 0.4) {
+                                        
+                                        rows[rows.length - 2] = {
+                                            photos: newSecondLastPhotos,
+                                            height: newSecondLastHeight
+                                        };
+                                        rows[rows.length - 1] = {
+                                            photos: newLastPhotos,
+                                            height: newLastHeight
+                                        };
+                                        break;
+                                    }
+                                }
+                            }
+                            // СЛУЧАЙ 4: АГРЕССИВНОЕ ВЫРАВНИВАНИЕ - для случаев, когда в предпоследнем ряду много фото (8+), а в последнем мало (3-4)
+                            else if (secondLastRow.photos.length >= 8 && lastRow.photos.length <= 4 && lastRowFillRatio < 0.9) {
+                                // Рассчитываем, сколько фото нужно переместить для оптимального заполнения
+                                const targetLastRowCount = Math.min(6, Math.max(4, Math.floor(secondLastRow.photos.length * 0.4)));
+                                const photosToMove = targetLastRowCount - lastRow.photos.length;
+                                
+                                if (photosToMove > 0 && secondLastRow.photos.length - photosToMove >= 4) {
+                                    const newSecondLastPhotos = secondLastRow.photos.slice(0, -photosToMove);
+                                    const newLastPhotos = [...secondLastRow.photos.slice(-photosToMove), ...lastRow.photos];
+                                    
+                                    const newSecondLastAspect = newSecondLastPhotos.reduce((sum, img) => sum + img.aspectRatio, 0);
+                                    const newLastAspect = newLastPhotos.reduce((sum, img) => sum + img.aspectRatio, 0);
+                                    
+                                    const newSecondLastGap = calculateGapWidth(newSecondLastPhotos.length);
+                                    const newLastGap = calculateGapWidth(newLastPhotos.length);
+                                    
+                                    const newSecondLastHeight = Math.min(
+                                        (containerWidth - newSecondLastGap) / newSecondLastAspect,
+                                        TARGET_ROW_HEIGHT * MAX_ROW_HEIGHT_MULTIPLIER
+                                    );
+                                    
+                                    const newLastHeight = Math.min(
+                                        (containerWidth - newLastGap) / newLastAspect,
+                                        TARGET_ROW_HEIGHT * MAX_ROW_HEIGHT_MULTIPLIER
+                                    );
+                                    
+                                    // Проверяем, что высоты в допустимых пределах
+                                    if (newSecondLastHeight >= TARGET_ROW_HEIGHT * 0.4 && newLastHeight >= TARGET_ROW_HEIGHT * 0.4) {
+                                        rows[rows.length - 2] = {
+                                            photos: newSecondLastPhotos,
+                                            height: newSecondLastHeight
+                                        };
+                                        rows[rows.length - 1] = {
+                                            photos: newLastPhotos,
+                                            height: newLastHeight
+                                        };
+                                    }
+                                }
+                            }
+                        }
+
+                        // === АГРЕССИВНОЕ ВЫРАВНИВАНИЕ: Увеличиваем все ряды до полного заполнения ===
+                        for (let i = 0; i < rows.length; i++) {
+                            const row = rows[i];
+                            const totalAspect = row.photos.reduce((sum, img) => sum + img.aspectRatio, 0);
+                            const gapWidth = calculateGapWidth(row.photos.length);
+                            const currentWidth = totalAspect * row.height + gapWidth;
+                            const fillRatio = currentWidth / containerWidth;
+
+                            // Если ряд заполнен более чем на 85% но менее 100%, увеличиваем его до 100%
+                            if (fillRatio >= 0.85 && fillRatio < 1.0) {
+                                const desiredHeight = (containerWidth - gapWidth) / totalAspect;
+                                // Ограничиваем максимальной высотой
+                                const maxAllowedHeight = TARGET_ROW_HEIGHT * (MAX_ROW_HEIGHT_MULTIPLIER + 0.3);
+                                
+                                const newHeight = Math.min(desiredHeight, maxAllowedHeight);
+                                
+                                // Если новая высота не меньше текущей (увеличиваем) и при этом не превышает максимальную, то применяем
+                                if (newHeight >= row.height && newHeight <= maxAllowedHeight) {
+                                    row.height = newHeight;
+                                }
                             }
                         }
                         
-                        const finalRow = row.map(img => ({
-                            ...img,
-                            height: finalRowHeight,
-                            width: img.aspectRatio * finalRowHeight,
-                        }));
-                        
-                        rows.push({ type: 'photoRow', content: finalRow, uniqueId: rows.length });
+                        return rows;
                     };
 
+                    // Функция для расчета "стоимости" ряда
+                    const calculateRowCost = (rowPhotos, targetHeight, containerWidth) => {
+                        if (rowPhotos.length === 0) return Infinity;
+                        
+                        const totalAspect = rowPhotos.reduce((sum, img) => sum + img.aspectRatio, 0);
+                        const gapWidth = (rowPhotos.length - 1) * GALLERY_GAP_PX;
+                        const actualHeight = (containerWidth - gapWidth) / totalAspect;
+                        
+                        // Штрафуем за отклонение от целевой высоты
+                        const heightDiff = Math.abs(actualHeight - targetHeight) / targetHeight;
+                        
+                        // Штрафуем за слишком малое количество фото в ряду
+                        const countPenalty = rowPhotos.length < 2 ? 0.3 : 0;
+                        
+                        // Штрафуем за слишком большое отклонение высоты
+                        const extremeHeightPenalty = actualHeight > targetHeight * 2 ? 1 : 0;
+                        
+                        return heightDiff + countPenalty + extremeHeightPenalty;
+                    };
+
+                    // Сначала группируем контент по разделам
+                    const sections = [];
+                    let currentSection = [];
+                    
                     for (const item of allContent) {
                         if (item.type === 'divider') {
-                            if (currentRow.length > 0) {
-                                finalizePhotoRow(currentRow);
-                                currentRow = [];
-                                currentRowTotalAspect = 0;
+                            if (currentSection.length > 0) {
+                                sections.push({ type: 'photos', items: currentSection });
+                                currentSection = [];
                             }
-                            rows.push({ type: 'dividerRow', content: item, uniqueId: item.timestamp });
-
-                        } else if (item.aspectRatio > 0 && item.url) {
-                            const potentialAspect = currentRowTotalAspect + item.aspectRatio;
-                            const rowCount = currentRow.length + 1;
-                            const potentialRowHeight = (containerWidth - calculateGapWidth(rowCount)) / potentialAspect;
-
-                            const shouldStartNewRow = currentRow.length > 0 && potentialRowHeight < TARGET_ROW_HEIGHT * 0.9; 
-
-                            if (shouldStartNewRow) {
-                                finalizePhotoRow(currentRow);
-
-                                currentRow = [item];
-                                currentRowTotalAspect = item.aspectRatio;
-                            } else {
-                                currentRow.push(item);
-                                currentRowTotalAspect = potentialAspect;
-                            }
+                            sections.push({ type: 'divider', item: item });
+                        } else {
+                            currentSection.push(item);
                         }
                     }
-                    
-                    if (currentRow.length > 0) {
-                        finalizePhotoRow(currentRow, true);
+                    if (currentSection.length > 0) {
+                        sections.push({ type: 'photos', items: currentSection });
+                    }
+
+                    // Обрабатываем каждую секцию отдельно
+                    for (const section of sections) {
+                        if (section.type === 'divider') {
+                            // Добавляем разделитель
+                            rows.push({ 
+                                type: 'dividerRow', 
+                                content: section.item, 
+                                uniqueId: section.item.timestamp 
+                            });
+                            continue;
+                        }
+
+                        // Для секции с фото используем оптимизированное распределение
+                        const sectionPhotos = section.items.filter(item => 
+                            item.type !== 'divider' && item.aspectRatio > 0 && item.url
+                        );
+                        
+                        if (sectionPhotos.length === 0) continue;
+                        
+                        const photoRows = distributePhotosOptimally(
+                            sectionPhotos, 
+                            TARGET_ROW_HEIGHT, 
+                            containerWidth
+                        );
+                        
+                        // Преобразуем ряды в нужный формат
+                        for (const row of photoRows) {
+                            const rowContent = row.photos.map(photo => ({
+                                ...photo,
+                                height: row.height,
+                                width: photo.aspectRatio * row.height,
+                            }));
+                            
+                            rows.push({ 
+                                type: 'photoRow', 
+                                content: rowContent, 
+                                uniqueId: Date.now() + Math.random() 
+                            });
+                        }
                     }
                     
                     return rows;
-
                 }, [allContent, containerWidth]);
 
                 const isDraggingCurrent = (uniqueId) => isReorderMode && dragItemUniqueId.current === uniqueId;
@@ -1763,12 +1776,13 @@
                                     return (
                                         <div 
                                             key={key} 
-                                            className={`
-                                                w-full my-8 flex items-center justify-center relative 
-                                                ${isReorderMode ? 'cursor-grab py-2' : ''}
-                                                ${isDraggingCurrent(divider.timestamp) ? 'opacity-50 border-2 border-indigo-500 scale-[0.98]' : ''}
-                                                ${isDragOverTarget(divider.timestamp) ? 'border-2 border-dashed border-green-500' : ''}
-                                            `}
+                                            className={`w-full my-8 flex items-center justify-center relative ${
+                                                isReorderMode ? 'cursor-grab py-2' : ''
+                                            } ${
+                                                isDraggingCurrent(divider.timestamp) ? 'opacity-50 border-2 border-indigo-500 scale-[0.98]' : ''
+                                            } ${
+                                                isDragOverTarget(divider.timestamp) ? 'border-2 border-dashed border-green-500' : ''
+                                            }`}
                                             draggable={isReorderMode && isAdmin}
                                             onDragStart={isReorderMode && isAdmin ? (e) => handleDragStart(e, divider.timestamp) : undefined}
                                             onDragEnter={isReorderMode && isAdmin ? (e) => handleDragEnter(e, divider.timestamp) : undefined}
@@ -1893,59 +1907,29 @@
                 );
             };
 
-            // --- Вид: Главная страница (Список альбомов) ---
-            const HomeView = () => {
-                // Фильтрация: Админ видит всё, остальные только не скрытые
-                const visibleAlbums = isAdmin ? albums : albums.filter(a => !a.hidden);
-
-                return (
-                    <div className="px-4 sm:px-6 lg:px-8 py-8">
-                        <div className="flex justify-between items-center mb-8 border-b pb-2">
-                            <h2 className="text-3xl font-extrabold text-gray-900">Все альбомы</h2>
-                            
-                            {/* Кнопка сортировки альбомов */}
-                            {isAdmin && visibleAlbums.length > 1 && (
-                                <button 
-                                    onClick={toggleAlbumReorderMode}
-                                    className={`flex items-center px-3 py-1.5 text-sm font-medium rounded-lg transition ${
-                                        isAlbumReorderMode 
-                                            ? 'bg-indigo-600 text-white shadow-lg ring-2 ring-offset-1 ring-indigo-500' 
-                                            : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
-                                    }`}
-                                >
-                                    <ArrowUpDown className="w-4 h-4 mr-2" />
-                                    {isAlbumReorderMode ? 'Сохранить порядок' : 'Сортировать'}
-                                </button>
+            const HomeView = () => (
+                <div className="px-4 sm:px-6 lg:px-8 py-8">
+                    <h2 className="text-3xl font-extrabold text-gray-900 mb-8 border-b pb-2">Все альбомы</h2>
+                    
+                    {albums.length === 0 ? (
+                        <div className="text-center py-20 bg-white rounded-xl border border-dashed border-gray-300">
+                            <ImageIcon className="w-12 h-12 text-gray-400 mx-auto" />
+                            <h3 className="mt-2 text-lg font-medium text-gray-900">Альбомы не найдены</h3>
+                            {isAdmin && (
+                                <p className="mt-1 text-sm text-gray-500">
+                                    Вы можете создать первый альбом.
+                                </p>
                             )}
                         </div>
-                        
-                        {visibleAlbums.length === 0 ? (
-                            <div className="text-center py-20 bg-white rounded-xl border border-dashed border-gray-300">
-                                <ImageIcon className="w-12 h-12 text-gray-400 mx-auto" />
-                                <h3 className="mt-2 text-lg font-medium text-gray-900">Нет доступных альбомов</h3>
-                                {isAdmin && (
-                                    <p className="mt-1 text-sm text-gray-500">
-                                        Вы можете создать первый альбом.
-                                    </p>
-                                )}
-                            </div>
-                        ) : (
-                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-                                {visibleAlbums.map(album => (
-                                    <AlbumCard key={album.id} album={album} />
-                                ))}
-                            </div>
-                        )}
-
-                        {/* Подсказка для режима сортировки */}
-                        {isAlbumReorderMode && (
-                            <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 bg-indigo-900 text-white px-6 py-3 rounded-full shadow-xl z-50 animate-bounce">
-                                Перетаскивайте альбомы, чтобы изменить их порядок
-                            </div>
-                        )}
-                    </div>
-                );
-            };
+                    ) : (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                            {albums.map(album => (
+                                <AlbumCard key={album.id} album={album} />
+                            ))}
+                        </div>
+                    )}
+                </div>
+            );
 
             if (error && error.isCritical) {
                 return (
@@ -2065,16 +2049,6 @@
                                         Админ Вход
                                     </button>
                                 )}
-                                {isAdmin && (
-                                    <button
-                                        onClick={handleAdminLogout}
-                                        className="flex items-center px-4 py-2 border border-red-300 text-sm font-medium rounded-full text-red-700 bg-red-100 hover:bg-red-200 transition shadow-sm"
-                                        title="Выйти из режима Администратора"
-                                    >
-                                        <LogOut className="h-5 w-5 mr-2" />
-                                        Выход (Админ)
-                                    </button>
-                                )}
                             </div>
                         </div>
                     </header>
@@ -2088,7 +2062,6 @@
                     <AddAlbumModal />
                     <AddPhotoModal />
                     <AddDividerModal />
-                    <DeleteAlbumConfirmModal />
                     
                     <ImageModal 
                         image={enlargedImage}
