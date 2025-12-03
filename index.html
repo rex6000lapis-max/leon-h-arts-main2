@@ -106,7 +106,7 @@
         .fixed-click-zone {
           position: fixed; 
           top: 50%;
-          transform: translateY(-50%);
+          transform: translateY(-50%); 
           width: 20%; 
           height: 50%; 
           z-index: 65; 
@@ -211,9 +211,6 @@
         );
         const AlertTriangle = (props) => (
             <Icon {...props}><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" /><line x1="12" x2="12" y1="9" y2="13" /><line x1="12" x2="12" y1="17" y2="17" /></Icon>
-        );
-        const LogOut = (props) => (
-            <Icon {...props}><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><polyline points="16 17 21 12 16 7" /><line x1="21" y1="12" x2="9" y2="12" /></Icon>
         );
         const Eye = (props) => (
             <Icon {...props}><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" /></Icon>
@@ -442,18 +439,17 @@
             const [selectedAlbum, setSelectedAlbum] = useState(null);
             const [isDeleteMode, setIsDeleteMode] = useState(false);
             const [isReorderMode, setIsReorderMode] = useState(false);
-            
-            // НОВЫЕ СОСТОЯНИЯ ДЛЯ УПРАВЛЕНИЯ АЛЬБОМАМИ
-            const [isAlbumReorderMode, setIsAlbumReorderMode] = useState(false);
-            const [albumToDelete, setAlbumToDelete] = useState(null);
-            const [deleteStep, setDeleteStep] = useState(0);
-            
             const [isAddAlbumModalOpen, setIsAddAlbumModalOpen] = useState(false);
             const [isAddPhotoModalOpen, setIsAddPhotoModalOpen] = useState(false);
             const [isAddDividerModalOpen, setIsAddDividerModalOpen] = useState(false);
             const [enlargedImage, setEnlargedImage] = useState(null);
             const dragItemUniqueId = useRef(null);
             const dragOverItemUniqueId = useRef(null);
+
+            // === НОВЫЕ СОСТОЯНИЯ ДЛЯ ФУНКЦИЙ УПРАВЛЕНИЯ АЛЬБОМАМИ ===
+            const [isAlbumReorderMode, setIsAlbumReorderMode] = useState(false);
+            const [albumToDelete, setAlbumToDelete] = useState(null);
+            const [deleteStep, setDeleteStep] = useState(0);
 
             // === ИСПРАВЛЕННАЯ ЛОГИКА ОТКРЫТИЯ/ЗАКРЫТИЯ ИЗОБРАЖЕНИЯ ===
             const handleOpenImage = useCallback((image) => {
@@ -527,7 +523,6 @@
                 setIsDeleteMode(prev => !prev);
                 if (!isDeleteMode) {
                     setIsReorderMode(false);
-                    setIsAlbumReorderMode(false);
                 }
                 // Восстанавливаем позицию после изменения состояния
                 setTimeout(() => {
@@ -541,7 +536,6 @@
                 setIsReorderMode(prev => !prev);
                 if (!isReorderMode) {
                     setIsDeleteMode(false);
-                    setIsAlbumReorderMode(false);
                 }
                 // Восстанавливаем позицию после изменения состояния
                 setTimeout(() => {
@@ -549,7 +543,7 @@
                 }, 0);
             }, [isReorderMode, isAdmin]);
 
-            // НОВАЯ ФУНКЦИЯ: Переключение режима сортировки альбомов
+            // === НОВАЯ ФУНКЦИЯ: Переключение режима сортировки альбомов ===
             const toggleAlbumReorderMode = useCallback(() => {
                 if (!isAdmin) return;
                 saveScrollPosition();
@@ -597,17 +591,8 @@
                 const unsubscribe = onAuthStateChanged(auth, (user) => {
                     if (user) {
                         setUserId(user.uid);
-                        if (user.uid === ADMIN_UID) {
-                            setIsAdmin(true);
-                            localStorage.setItem('isAdmin', 'true');
-                        } else {
-                            setIsAdmin(false);
-                            localStorage.removeItem('isAdmin');
-                        }
                     } else {
                         setUserId(null);
-                        setIsAdmin(false);
-                        localStorage.removeItem('isAdmin');
                     }
                     setAuthReady(true);
                 });
@@ -648,27 +633,6 @@
                 } catch (e) {
                     console.error("Ошибка входа администратора:", e);
                     alertUser('Ошибка входа', `Не удалось войти. Проверьте Email и Пароль. (${e.code})`);
-                }
-            };
-
-            const handleAdminLogout = async () => {
-                if (!auth) return;
-                try {
-                    await signOut(auth);
-                    if (initialAuthToken) {
-                        await signInWithCustomToken(auth, initialAuthToken);
-                    } else {
-                        await signInAnonymously(auth);
-                    }
-                    setIsAdmin(false);
-                    localStorage.removeItem('isAdmin');
-                    setIsDeleteMode(false);
-                    setIsReorderMode(false);
-                    setIsAlbumReorderMode(false);
-                    alertUser('Выход', 'Вы успешно вышли из режима администратора.');
-                } catch (e) {
-                    console.error("Ошибка выхода:", e);
-                    alertUser('Ошибка', 'Не удалось выйти из системы.');
                 }
             };
 
@@ -798,7 +762,7 @@
 
             // --- 3. CRUD-функции (Только для Администратора) ---
             
-            // НОВЫЕ ФУНКЦИИ ДЛЯ УПРАВЛЕНИЯ АЛЬБОМАМИ
+            // === НОВЫЕ ФУНКЦИИ ДЛЯ УПРАВЛЕНИЯ АЛЬБОМАМИ ===
             const initiateDeleteAlbum = (album) => {
                 if (!isAdmin) return;
                 setAlbumToDelete(album);
@@ -867,7 +831,6 @@
                     console.log(`Альбом ${albumId} переименован в "${newName}"`);
                     handleCloseRenameModal();
                     return true;
-
                 } catch (e) {
                     console.error("Ошибка при переименовании альбома:", e);
                     alertUser('Ошибка', 'Не удалось переименовать альбом.');
@@ -953,7 +916,7 @@
                 }
             };
 
-            // --- DRAG AND DROP ДЛЯ АЛЬБОМОВ ---
+            // === НОВЫЕ ФУНКЦИИ ДЛЯ DRAG AND DROP АЛЬБОМОВ ===
             const handleAlbumDragStart = (e, albumId) => {
                 if (!isAlbumReorderMode || !isAdmin) return;
                 dragItemUniqueId.current = albumId;
@@ -1221,7 +1184,7 @@
                             onClick={() => handleOpenAlbum(album)}
                             className={`bg-white rounded-xl shadow-lg hover:shadow-xl transition-all overflow-hidden cursor-pointer h-full flex flex-col ${opacityClass} ${isDragOver ? 'ring-2 ring-indigo-500' : ''}`}
                         >
-                            <div className="w-full h-48 bg-gray-200 flex items-center justify-center relative flex-shrink-0">
+                            <div className="w-full h-full bg-gray-200 flex items-center justify-center relative flex-shrink-0">
                                 {previewUrl ? (
                                     <img 
                                         src={previewUrl} 
@@ -1314,7 +1277,7 @@
                 );
             };
 
-            // НОВЫЙ КОМПОНЕНТ: Модальное окно подтверждения удаления альбома
+            // === НОВЫЙ КОМПОНЕНТ: Модальное окно подтверждения удаления альбома ===
             const DeleteAlbumConfirmModal = () => {
                 if (!albumToDelete) return null;
 
@@ -2338,16 +2301,6 @@
                                     >
                                         <Key className="h-5 w-5 mr-2" />
                                         Админ Вход
-                                    </button>
-                                )}
-                                {isAdmin && (
-                                    <button
-                                        onClick={handleAdminLogout}
-                                        className="flex items-center px-4 py-2 border border-red-300 text-sm font-medium rounded-full text-red-700 bg-red-100 hover:bg-red-200 transition shadow-sm"
-                                        title="Выйти из режима Администратора"
-                                    >
-                                        <LogOut className="h-5 w-5 mr-2" />
-                                        Выход (Админ)
                                     </button>
                                 )}
                             </div>
