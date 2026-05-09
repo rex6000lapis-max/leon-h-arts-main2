@@ -4,13 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Leon H-Arts</title>
-<!-- ФАВИКОНЫ: Сгенерированы через Favicon.io -->
-<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
-<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
-<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
-<link rel="manifest" href="/site.webmanifest">
-<link rel="shortcut icon" href="/favicon.ico">
-<meta name="theme-color" content="#ffffff">
+    <!-- ФАВИКОНЫ: Сгенерированы через Favicon.io -->
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+    <link rel="manifest" href="/site.webmanifest">
+    <link rel="shortcut icon" href="/favicon.ico">
+    <meta name="theme-color" content="#ffffff">
     
     <!-- 1. Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -21,64 +21,64 @@
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
     <!-- 3. Firebase CDNs -->
-<script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-    import { 
-        getAuth, 
-        signInAnonymously, 
-        signInWithCustomToken, 
-        onAuthStateChanged, 
-        signInWithEmailAndPassword, 
-        signOut 
-    } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-    import { 
-        getFirestore, 
-        doc, 
-        onSnapshot, 
-        collection, 
-        query, 
-        addDoc, 
-        updateDoc,
-        deleteDoc,
-        arrayUnion, 
-        serverTimestamp,
-        writeBatch 
-    } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-    
-    // --- Экспортируем всё в window, чтобы React-скрипт мог обращаться ---
-    window.initializeApp = initializeApp;
-    window.getAuth = getAuth;
-    window.signInAnonymously = signInAnonymously;
-    window.signInWithCustomToken = signInWithCustomToken;
-    window.onAuthStateChanged = onAuthStateChanged;
-    window.signInWithEmailAndPassword = signInWithEmailAndPassword;
-    window.signOut = signOut;
-    window.getFirestore = getFirestore;
-    window.doc = doc;
-    window.onSnapshot = onSnapshot;
-    window.collection = collection;
-    window.query = query;
-    window.addDoc = addDoc;
-    window.updateDoc = updateDoc;
-    window.deleteDoc = deleteDoc;
-    window.arrayUnion = arrayUnion;
-    window.serverTimestamp = serverTimestamp;
-    window.writeBatch = writeBatch;
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { 
+            getAuth, 
+            signInAnonymously, 
+            signInWithCustomToken, 
+            onAuthStateChanged, 
+            signInWithEmailAndPassword, 
+            signOut 
+        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { 
+            getFirestore, 
+            doc, 
+            onSnapshot, 
+            collection, 
+            query, 
+            addDoc, 
+            updateDoc,
+            deleteDoc,
+            arrayUnion, 
+            serverTimestamp,
+            writeBatch 
+        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        
+        // --- Экспортируем всё в window, чтобы React-скрипт мог обращаться ---
+        window.initializeApp = initializeApp;
+        window.getAuth = getAuth;
+        window.signInAnonymously = signInAnonymously;
+        window.signInWithCustomToken = signInWithCustomToken;
+        window.onAuthStateChanged = onAuthStateChanged;
+        window.signInWithEmailAndPassword = signInWithEmailAndPassword;
+        window.signOut = signOut;
+        window.getFirestore = getFirestore;
+        window.doc = doc;
+        window.onSnapshot = onSnapshot;
+        window.collection = collection;
+        window.query = query;
+        window.addDoc = addDoc;
+        window.updateDoc = updateDoc;
+        window.deleteDoc = deleteDoc;
+        window.arrayUnion = arrayUnion;
+        window.serverTimestamp = serverTimestamp;
+        window.writeBatch = writeBatch;
 
-    // --- Глобальные переменные для оффлайн-режима ---
-    if (typeof window.__app_id === 'undefined') window.__app_id = 'default-app-id';
-    if (typeof window.__initial_auth_token === 'undefined') window.__initial_auth_token = null;
-    if (typeof window.__firebase_config === 'undefined') {
-        window.__firebase_config = JSON.stringify({
-            apiKey: "AIzaSyBpThMaS36IkmAqUrvk9WpWi0AhOhndhU8",
-            authDomain: "leon-h-arts-6b69b.firebaseapp.com",
-            projectId: "leon-h-arts-6b69b",
-            storageBucket: "leon-h-arts-6b69b.firebasestorage.app",
-            messagingSenderId: "162244900947",
-            appId: "1:162244900947:web:0d265bc4fe5639380ceea6"
-        });
-    }
-</script>
+        // --- Глобальные переменные для оффлайн-режима ---
+        if (typeof window.__app_id === 'undefined') window.__app_id = 'default-app-id';
+        if (typeof window.__initial_auth_token === 'undefined') window.__initial_auth_token = null;
+        if (typeof window.__firebase_config === 'undefined') {
+            window.__firebase_config = JSON.stringify({
+                apiKey: "AIzaSyBpThMaS36IkmAqUrvk9WpWi0AhOhndhU8",
+                authDomain: "leon-h-arts-6b69b.firebaseapp.com",
+                projectId: "leon-h-arts-6b69b",
+                storageBucket: "leon-h-arts-6b69b.firebasestorage.app",
+                messagingSenderId: "162244900947",
+                appId: "1:162244900947:web:0d265bc4fe5639380ceea6"
+            });
+        }
+    </script>
     
     <style>
         /* Общие стили для фона и шрифта */
@@ -410,6 +410,7 @@
         const App = () => {
             // === УПРОЩЕННАЯ СИСТЕМА СОХРАНЕНИЯ ПОЗИЦИИ ПРОКРУТКИ ===
             const scrollPosition = useRef(0);
+            const pendingScrollRestore = useRef(null); // новое: для операций, меняющих данные
 
             const saveScrollPosition = () => {
                 scrollPosition.current = window.scrollY || document.documentElement.scrollTop;
@@ -424,6 +425,11 @@
                         });
                     }, 10);
                 }
+            };
+
+            // Запоминаем позицию перед опасной операцией (удаление, добавление, перетаскивание)
+            const prepareScrollRestore = () => {
+                pendingScrollRestore.current = window.scrollY || document.documentElement.scrollTop;
             };
 
             const [authReady, setAuthReady] = useState(false);
@@ -462,6 +468,20 @@
                     document.body.style.overflow = '';
                 };
             }, [enlargedImage]);
+
+            // === ВОССТАНОВЛЕНИЕ ПОЗИЦИИ ПОСЛЕ ИЗМЕНЕНИЯ ДАННЫХ ===
+            useEffect(() => {
+                if (pendingScrollRestore.current !== null && selectedAlbum) {
+                    const savedY = pendingScrollRestore.current;
+                    // Даём время на перерисовку
+                    requestAnimationFrame(() => {
+                        requestAnimationFrame(() => {
+                            window.scrollTo({ top: savedY, behavior: 'auto' });
+                            pendingScrollRestore.current = null;
+                        });
+                    });
+                }
+            }, [selectedAlbum]);
 
             // === ИСПРАВЛЕННАЯ ЛОГИКА ОТКРЫТИЯ/ЗАКРЫТИЯ ИЗОБРАЖЕНИЯ ===
             const handleOpenImage = useCallback((image) => {
@@ -791,6 +811,7 @@
 
                 if (deleteStep === 2) {
                     try {
+                        prepareScrollRestore(); // сохраняем позицию перед удалением
                         const collectionPath = `artifacts/${appId}/public/data/${PUBLIC_COLLECTION_NAME}`;
                         await deleteDoc(doc(db, collectionPath, albumToDelete.id));
                         console.log(`Альбом ${albumToDelete.name} удален.`);
@@ -811,6 +832,7 @@
             const toggleAlbumVisibility = async (album) => {
                 if (!isAdmin) return;
                 try {
+                    prepareScrollRestore(); // сохраняем позицию перед изменением видимости (на всякий случай)
                     const collectionPath = `artifacts/${appId}/public/data/${PUBLIC_COLLECTION_NAME}`;
                     await updateDoc(doc(db, collectionPath, album.id), {
                         hidden: !album.hidden
@@ -833,6 +855,7 @@
                 }
 
                 try {
+                    prepareScrollRestore(); // сохраняем позицию перед переименованием
                     const collectionPath = `artifacts/${appId}/public/data/${PUBLIC_COLLECTION_NAME}`;
                     const albumRef = doc(db, collectionPath, albumId);
                     
@@ -904,6 +927,8 @@
                     return;
                 }
 
+                prepareScrollRestore(); // ЗАПОМИНАЕМ ПОЗИЦИЮ ПЕРЕД УДАЛЕНИЕМ
+
                 try {
                     const collectionPath = `artifacts/${appId}/public/data/${PUBLIC_COLLECTION_NAME}`;
                     const albumRef = doc(db, collectionPath, albumId);
@@ -961,6 +986,8 @@
                 newAlbums.splice(targetIndex, 0, movedAlbum);
 
                 setAlbums(newAlbums);
+
+                prepareScrollRestore(); // ЗАПОМИНАЕМ ПОЗИЦИЮ ПЕРЕД СОХРАНЕНИЕМ ПОРЯДКА
 
                 try {
                     const batch = writeBatch(db);
@@ -1030,6 +1057,8 @@
                     return;
                 }
 
+                prepareScrollRestore(); // ЗАПОМИНАЕМ ПОЗИЦИЮ ПЕРЕД СОХРАНЕНИЕМ НОВОГО ПОРЯДКА
+
                 const collectionPath = `artifacts/${appId}/public/data/${PUBLIC_COLLECTION_NAME}`;
                 const albumRef = doc(db, collectionPath, selectedAlbum.id);
                 const list = [...selectedAlbum.images];
@@ -1076,6 +1105,8 @@
                     return;
                 }
 
+                prepareScrollRestore(); // ЗАПОМИНАЕМ ПОЗИЦИЮ ПЕРЕД ДОБАВЛЕНИЕМ
+
                 try {
                     const collectionPath = `artifacts/${appId}/public/data/${PUBLIC_COLLECTION_NAME}`;
                     const albumRef = doc(db, collectionPath, albumId);
@@ -1109,6 +1140,7 @@
                 }
 
                 try {
+                    prepareScrollRestore(); // сохраняем позицию перед созданием альбома
                     const collectionPath = `artifacts/${appId}/public/data/${PUBLIC_COLLECTION_NAME}`;
                     // Добавляем orderIndex в конец списка
                     const maxOrderIndex = albums.length > 0 ? Math.max(...albums.map(a => a.orderIndex || 0)) : 0;
@@ -1137,6 +1169,8 @@
                     alertUser('Критическая ошибка', 'Не удалось добавить фото: не инициализирована база данных.');
                     return;
                 }
+
+                prepareScrollRestore(); // ЗАПОМИНАЕМ ПОЗИЦИЮ ПЕРЕД ДОБАВЛЕНИЕМ ФОТО
 
                 try {
                     const collectionPath = `artifacts/${appId}/public/data/${PUBLIC_COLLECTION_NAME}`;
