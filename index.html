@@ -253,7 +253,7 @@
         const GALLERY_GAP_PX = 2; 
         const MAX_ROW_HEIGHT_MULTIPLIER = 1.5;
 
-        // --- КОМПОНЕНТ: Модальное окно для увеличенного изображения ---
+        // --- КОМПОНЕНТ: Модальное окно для увеличенного изображения (ИСПРАВЛЕННЫЙ) ---
         const ImageModal = ({ image, onClose, onSaveCaption, albumId, onNext, onPrev, isAdmin }) => {
             if (!image || image.type === 'divider') return null;
 
@@ -264,6 +264,23 @@
             useEffect(() => {
                 setCaption(image.caption || '');
             }, [image.caption]);
+
+            // ✅ БЛОКИРОВКА ПРОКРУТКИ BODY ПРИ ОТКРЫТИИ МОДАЛКИ (убирает дёрганье)
+            useEffect(() => {
+                const originalOverflow = document.body.style.overflow;
+                const originalPaddingRight = document.body.style.paddingRight;
+                const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
+                
+                document.body.style.overflow = 'hidden';
+                if (scrollbarWidth > 0) {
+                    document.body.style.paddingRight = `${scrollbarWidth}px`;
+                }
+                
+                return () => {
+                    document.body.style.overflow = originalOverflow;
+                    document.body.style.paddingRight = originalPaddingRight;
+                };
+            }, []);
 
             useEffect(() => {
                 const handleKeyDown = (e) => {
