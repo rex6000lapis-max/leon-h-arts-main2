@@ -253,7 +253,7 @@
         const GALLERY_GAP_PX = 2; 
         const MAX_ROW_HEIGHT_MULTIPLIER = 1.5;
 
-        // --- КОМПОНЕНТ: Модальное окно для увеличенного изображения ---
+        // --- КОМПОНЕНТ: Модальное окно для увеличенного изображения (ИСПРАВЛЕНА ОБРАБОТКА КЛАВИШ) ---
         const ImageModal = ({ image, onClose, onSaveCaption, albumId, onNext, onPrev, isAdmin }) => {
             if (!image || image.type === 'divider') return null;
 
@@ -261,25 +261,38 @@
             const [isSaving, setIsSaving] = useState(false);
             const [isEditPanelOpen, setIsEditPanelOpen] = useState(false); 
             
+            // Создаем ref для функций навигации, чтобы обработчик клавиш всегда использовал последние версии
+            const onNextRef = useRef(onNext);
+            const onPrevRef = useRef(onPrev);
+            
+            // Обновляем ref при каждом изменении пропсов
+            useEffect(() => {
+                onNextRef.current = onNext;
+                onPrevRef.current = onPrev;
+            }, [onNext, onPrev]);
+            
             useEffect(() => {
                 setCaption(image.caption || '');
             }, [image.caption]);
 
+            // Исправленный обработчик клавиш - использует ref для доступа к актуальным onNext/onPrev
             useEffect(() => {
                 const handleKeyDown = (e) => {
                     if (e.key === 'Escape') {
                         onClose();
                     } else if (e.key === 'ArrowRight') {
-                        onNext();
+                        // Используем актуальную функцию из ref
+                        if (onNextRef.current) onNextRef.current();
                     } else if (e.key === 'ArrowLeft') {
-                        onPrev();
+                        if (onPrevRef.current) onPrevRef.current();
                     }
                 };
                 document.addEventListener('keydown', handleKeyDown);
                 return () => {
                     document.removeEventListener('keydown', handleKeyDown);
                 };
-            }, [onClose, onNext, onPrev]);
+                // Зависимости: onClose (стабильная) и ref не нужны
+            }, [onClose]);
 
             const handleSave = async () => {
                 if (!isAdmin) {
