@@ -790,27 +790,7 @@
                     setIsAdmin(true);
                 }
 
-                const setupFirebase = async () => {
-                    if (!auth) {
-                        setAuthReady(true);
-                        return;
-                    }
-                    try {
-                        if (initialAuthToken) {
-                            await signInWithCustomToken(auth, initialAuthToken);
-                        } else {
-                            await signInAnonymously(auth);
-                        }
-                    } catch (e) {
-                        console.error("Ошибка аутентификации:", e);
-                        setError(prev => ({
-                            ...prev,
-                            name: "Ошибка аутентификации",
-                            message: `Не удалось авторизоваться в Firebase. (Код: ${e.code || 'UNKNOWN'}, Сообщение: ${e.message})`
-                        }));
-                    }
-                };
-
+                // Слушатель состояния аутентификации
                 const unsubscribe = onAuthStateChanged(auth, (user) => {
                     if (user) {
                         setUserId(user.uid);
@@ -828,14 +808,32 @@
                             localStorage.removeItem('isAdmin');
                         }
                     } else {
-                        setUserId(null);
-                        setUserProfile(null);
-                        setIsAdmin(false);
+                        // Нет пользователя — выполняем анонимный вход
+                        if (auth) {
+                            signInAnonymously(auth).catch(e => {
+                                console.error("Ошибка анонимного входа:", e);
+                                setError(prev => ({
+                                    ...prev,
+                                    name: "Ошибка аутентификации",
+                                    message: `Не удалось авторизоваться анонимно. ${e.message}`
+                                }));
+                            });
+                        } else {
+                            setUserId(null);
+                            setUserProfile(null);
+                            setIsAdmin(false);
+                        }
                     }
                     setAuthReady(true);
                 });
 
-                setupFirebase();
+                // Если передан initialAuthToken, используем его (для интеграций Canvas)
+                if (initialAuthToken && auth) {
+                    signInWithCustomToken(auth, initialAuthToken).catch(e => {
+                        console.error("Ошибка входа с кастомным токеном:", e);
+                    });
+                }
+
                 return () => unsubscribe();
             }, [error]);
 
@@ -868,28 +866,41 @@
                 }
                 const provider = new GoogleAuthProvider();
                 try {
+                    let result;
                     // Если текущий пользователь — аноним
                     if (auth.currentUser && auth.currentUser.isAnonymous) {
                         try {
                             // Пытаемся привязать Google к анонимному аккаунту
-                            await linkWithPopup(auth.currentUser, provider);
-                            return;
+                            result = await linkWithPopup(auth.currentUser, provider);
                         } catch (linkError) {
                             // Если Google уже связан с другим пользователем
                             if (linkError.code === 'auth/credential-already-in-use') {
                                 console.log("Google аккаунт уже используется. Выполняем выход и вход заново.");
                                 await signOut(auth);               // выходим из анонимного
-                                await signInWithPopup(auth, provider); // входим через Google
-                                return;
+                                result = await signInWithPopup(auth, provider); // входим через Google
+                            } else {
+                                throw linkError;
                             }
-                            throw linkError;
                         }
                     } else {
                         // Если уже есть не-анонимный пользователь — выходим и заходим через Google
                         if (auth.currentUser) {
                             await signOut(auth);
                         }
-                        await signInWithPopup(auth, provider);
+                        result = await signInWithPopup(auth, provider);
+                    }
+                    
+                    // После успешного входа/привязки немедленно обновляем профиль,
+                    // чтобы гарантированно отображалось имя Google
+                    if (result && result.user) {
+                        const user = result.user;
+                        setUserProfile({
+                            uid: user.uid,
+                            displayName: user.displayName || 'Аноним',
+                            photoURL: user.photoURL || null,
+                            isAnonymous: user.isAnonymous
+                        });
+                        // onAuthStateChanged тоже сработает, но это даст мгновенное обновление UI
                     }
                 } catch (e) {
                     console.error("Ошибка входа через Google:", e);
@@ -901,7 +912,7 @@
                 if (!auth) return;
                 try {
                     await signOut(auth);
-                    await signInAnonymously(auth);
+                    // Анонимный вход теперь произойдет автоматически в onAuthStateChanged (user = null)
                 } catch (e) {
                     console.error("Ошибка выхода:", e);
                 }
