@@ -794,9 +794,13 @@
                 const unsubscribe = onAuthStateChanged(auth, (user) => {
                     if (user) {
                         setUserId(user.uid);
+                        // Улучшенная логика: для анонимных всегда "Аноним", для неанонимных – имя из профиля
+                        const displayName = user.isAnonymous 
+                            ? 'Аноним' 
+                            : (user.displayName || 'Пользователь Google');
                         setUserProfile({
                             uid: user.uid,
-                            displayName: user.displayName || 'Аноним',
+                            displayName: displayName,
                             photoURL: user.photoURL || null,
                             isAnonymous: user.isAnonymous
                         });
@@ -808,7 +812,7 @@
                             localStorage.removeItem('isAdmin');
                         }
                     } else {
-                        // Нет пользователя — выполняем анонимный вход
+                        // Нет пользователя – выполняем анонимный вход
                         if (auth) {
                             signInAnonymously(auth).catch(e => {
                                 console.error("Ошибка анонимного входа:", e);
@@ -866,18 +870,17 @@
                 }
                 const provider = new GoogleAuthProvider();
                 try {
-                    let result;
                     // Если текущий пользователь — аноним
                     if (auth.currentUser && auth.currentUser.isAnonymous) {
                         try {
                             // Пытаемся привязать Google к анонимному аккаунту
-                            result = await linkWithPopup(auth.currentUser, provider);
+                            await linkWithPopup(auth.currentUser, provider);
                         } catch (linkError) {
                             // Если Google уже связан с другим пользователем
                             if (linkError.code === 'auth/credential-already-in-use') {
                                 console.log("Google аккаунт уже используется. Выполняем выход и вход заново.");
                                 await signOut(auth);               // выходим из анонимного
-                                result = await signInWithPopup(auth, provider); // входим через Google
+                                await signInWithPopup(auth, provider); // входим через Google
                             } else {
                                 throw linkError;
                             }
@@ -887,20 +890,7 @@
                         if (auth.currentUser) {
                             await signOut(auth);
                         }
-                        result = await signInWithPopup(auth, provider);
-                    }
-                    
-                    // После успешного входа/привязки немедленно обновляем профиль,
-                    // чтобы гарантированно отображалось имя Google
-                    if (result && result.user) {
-                        const user = result.user;
-                        setUserProfile({
-                            uid: user.uid,
-                            displayName: user.displayName || 'Аноним',
-                            photoURL: user.photoURL || null,
-                            isAnonymous: user.isAnonymous
-                        });
-                        // onAuthStateChanged тоже сработает, но это даст мгновенное обновление UI
+                        await signInWithPopup(auth, provider);
                     }
                 } catch (e) {
                     console.error("Ошибка входа через Google:", e);
