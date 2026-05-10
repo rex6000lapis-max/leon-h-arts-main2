@@ -11,10 +11,10 @@
     <link rel="manifest" href="/site.webmanifest">
     <link rel="shortcut icon" href="/favicon.ico">
     <meta name="theme-color" content="#ffffff">
-    
+
     <!-- 1. Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
-    
+
     <!-- 2. React, ReactDOM, Babel CDNs -->
     <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
@@ -23,28 +23,31 @@
     <!-- 3. Firebase CDNs -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { 
-            getAuth, 
-            signInAnonymously, 
-            signInWithCustomToken, 
-            onAuthStateChanged, 
-            signInWithEmailAndPassword, 
-            signOut 
+        import {
+            getAuth,
+            signInAnonymously,
+            signInWithCustomToken,
+            onAuthStateChanged,
+            signInWithEmailAndPassword,
+            signOut,
+            GoogleAuthProvider,
+            signInWithPopup,
+            linkWithPopup
         } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { 
-            getFirestore, 
-            doc, 
-            onSnapshot, 
-            collection, 
-            query, 
-            addDoc, 
+        import {
+            getFirestore,
+            doc,
+            onSnapshot,
+            collection,
+            query,
+            addDoc,
             updateDoc,
             deleteDoc,
-            arrayUnion, 
+            arrayUnion,
             serverTimestamp,
-            writeBatch 
+            writeBatch
         } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-        
+
         // --- Экспортируем всё в window, чтобы React-скрипт мог обращаться ---
         window.initializeApp = initializeApp;
         window.getAuth = getAuth;
@@ -53,6 +56,9 @@
         window.onAuthStateChanged = onAuthStateChanged;
         window.signInWithEmailAndPassword = signInWithEmailAndPassword;
         window.signOut = signOut;
+        window.GoogleAuthProvider = GoogleAuthProvider;
+        window.signInWithPopup = signInWithPopup;
+        window.linkWithPopup = linkWithPopup;
         window.getFirestore = getFirestore;
         window.doc = doc;
         window.onSnapshot = onSnapshot;
@@ -79,7 +85,7 @@
             });
         }
     </script>
-    
+
     <style>
         /* Общие стили для фона и шрифта */
         body {
@@ -91,56 +97,70 @@
         }
         /* Устранение проблем с прокруткой и переполнением */
         .min-h-screen { min-height: 100vh; }
-        
+
         /* Стили для модала изображения */
         .text-with-shadow {
-          color: white;
-          text-shadow: 
-            -1px -1px 0 #000,  
-             1px -1px 0 #000,
-            -1px 1px 0 #000,
-             1px 1px 0 #000,
-             0 0 10px rgba(0, 0, 0, 1);
+            color: white;
+            text-shadow:
+                -1px -1px 0 #000,
+                 1px -1px 0 #000,
+                -1px 1px 0 #000,
+                 1px 1px 0 #000,
+                 0 0 10px rgba(0, 0, 0, 1);
         }
 
         .fixed-click-zone {
-          position: fixed; 
-          top: 50%;
-          transform: translateY(-50%); 
-          width: 20%; 
-          height: 50%; 
-          z-index: 65; 
-          cursor: pointer;
-          display: flex;
-          align-items: center;
-          -webkit-tap-highlight-color: transparent; 
+            position: fixed;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 20%;
+            height: 50%;
+            z-index: 65;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            -webkit-tap-highlight-color: transparent;
         }
         .fixed-click-zone.left {
-          left: 0;
-          justify-content: flex-start;
+            left: 0;
+            justify-content: flex-start;
         }
         .fixed-click-zone.right {
-          right: 0;
-          justify-content: flex-end;
+            right: 0;
+            justify-content: flex-end;
         }
-        
+
         .nav-arrow {
-          color: white;
-          padding: 0;
-          cursor: pointer;
-          filter: drop-shadow(0 0 5px rgba(0, 0, 0, 0.9));
+            color: white;
+            padding: 0;
+            cursor: pointer;
+            filter: drop-shadow(0 0 5px rgba(0, 0, 0, 0.9));
         }
-        
+
         .fixed-click-zone.left .nav-arrow {
-          padding-left: 0.5rem; 
+            padding-left: 0.5rem;
         }
         .fixed-click-zone.right .nav-arrow {
-          padding-right: 0.5rem; 
+            padding-right: 0.5rem;
         }
-        
+
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
         @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes slideInRight { from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: translateX(0); } }
         .animate-fade-in-up { animation: fadeInUp 0.3s ease-out; }
+        .animate-slide-in { animation: slideInRight 0.3s ease-out; }
+
+        /* Стили для скроллбара комментариев */
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background-color: rgba(255,255,255,0.3);
+            border-radius: 20px;
+        }
     </style>
 </head>
 <body>
@@ -149,7 +169,12 @@
     <script type="text/babel">
         // Получаем глобальные переменные, предоставленные Canvas
         const {useState, useEffect, useCallback, useMemo, useRef} = React;
-        const { initializeApp, getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged, getFirestore, doc, onSnapshot, collection, query, addDoc, updateDoc, deleteDoc, arrayUnion, serverTimestamp, writeBatch } = window;
+        const {
+            initializeApp, getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged,
+            getFirestore, doc, onSnapshot, collection, query, addDoc, updateDoc, deleteDoc,
+            arrayUnion, serverTimestamp, writeBatch,
+            GoogleAuthProvider, signInWithPopup, linkWithPopup, signOut
+        } = window;
 
         // --- Встроенные React SVG компоненты (замена lucide-react) ---
         const Icon = ({ children, size = 24, className = '', ...props }) => (
@@ -218,10 +243,22 @@
         const EyeOff = (props) => (
             <Icon {...props}><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" /><line x1="1" y1="1" x2="23" y2="23" /></Icon>
         );
+        const Heart = (props) => (
+            <Icon {...props}><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z" /></Icon>
+        );
+        const MessageCircle = (props) => (
+            <Icon {...props}><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" /></Icon>
+        );
+        const Send = (props) => (
+            <Icon {...props}><line x1="22" x2="11" y1="2" y2="13" /><polygon points="22 2 15 22 11 13 2 9 22 2" /></Icon>
+        );
+        const LogOut = (props) => (
+            <Icon {...props}><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><polyline points="16 17 21 12 16 7" /><line x1="21" x2="9" y1="12" y2="12" /></Icon>
+        );
 
         // --- КОНСТАНТЫ И НАСТРОЙКИ ---
-        const ADMIN_UID = "fqU30jiK7rOobaur0XN2pVY4PMC2";  
-        const PUBLIC_COLLECTION_NAME = "fanfic_gallery_albums"; 
+        const ADMIN_UID = "fqU30jiK7rOobaur0XN2pVY4PMC2";
+        const PUBLIC_COLLECTION_NAME = "fanfic_gallery_albums";
 
         // Использование глобальных переменных Canvas
         const firebaseConfig = JSON.parse(window.__firebase_config);
@@ -249,63 +286,113 @@
             };
         }
 
-        const TARGET_ROW_HEIGHT = 300; 
-        const GALLERY_GAP_PX = 2; 
+        const TARGET_ROW_HEIGHT = 300;
+        const GALLERY_GAP_PX = 2;
         const MAX_ROW_HEIGHT_MULTIPLIER = 1.5;
 
-        // --- КОМПОНЕНТ: Модальное окно для увеличенного изображения (ИСПРАВЛЕНА ОБРАБОТКА КЛАВИШ) ---
-        const ImageModal = ({ image, onClose, onSaveCaption, albumId, onNext, onPrev, isAdmin }) => {
+        // --- КОМПОНЕНТ: Модальное окно для увеличенного изображения ---
+        const ImageModal = ({ image, onClose, onSaveCaption, albumId, onNext, onPrev, isAdmin, currentUserId, userProfile, onToggleLike, onAddComment, onDeleteComment, likes = [], comments = [] }) => {
             if (!image || image.type === 'divider') return null;
 
             const [caption, setCaption] = useState(image.caption || '');
             const [isSaving, setIsSaving] = useState(false);
-            const [isEditPanelOpen, setIsEditPanelOpen] = useState(false); 
-            
-            // Создаем ref для функций навигации, чтобы обработчик клавиш всегда использовал последние версии
-            const onNextRef = useRef(onNext);
-            const onPrevRef = useRef(onPrev);
-            
-            // Обновляем ref при каждом изменении пропсов
-            useEffect(() => {
-                onNextRef.current = onNext;
-                onPrevRef.current = onPrev;
-            }, [onNext, onPrev]);
-            
+            const [isEditPanelOpen, setIsEditPanelOpen] = useState(false);
+            const [isCommentsPanelOpen, setIsCommentsPanelOpen] = useState(false);
+            const [commentText, setCommentText] = useState('');
+            const [isLiking, setIsLiking] = useState(false);
+
+            // Локальное состояние для мгновенного отображения лайков
+            const [localLikes, setLocalLikes] = useState(likes || []);
+
             useEffect(() => {
                 setCaption(image.caption || '');
             }, [image.caption]);
 
-            // Исправленный обработчик клавиш - использует ref для доступа к актуальным onNext/onPrev
+            useEffect(() => {
+                setLocalLikes(likes || []);
+            }, [likes]);
+
+            // Скрываем скроллбар body при открытом модальном окне
+            useEffect(() => {
+                document.body.style.overflow = 'hidden';
+                return () => {
+                    document.body.style.overflow = '';
+                };
+            }, []);
+
+            // Закрываем панель комментариев при смене фото
+            useEffect(() => {
+                setIsCommentsPanelOpen(false);
+            }, [image.timestamp]);
+
             useEffect(() => {
                 const handleKeyDown = (e) => {
                     if (e.key === 'Escape') {
-                        onClose();
-                    } else if (e.key === 'ArrowRight') {
-                        // Используем актуальную функцию из ref
-                        if (onNextRef.current) onNextRef.current();
-                    } else if (e.key === 'ArrowLeft') {
-                        if (onPrevRef.current) onPrevRef.current();
+                        if (isCommentsPanelOpen) {
+                            setIsCommentsPanelOpen(false);
+                        } else {
+                            onClose();
+                        }
+                    } else if (e.key === 'ArrowRight' && !isCommentsPanelOpen) {
+                        onNext();
+                    } else if (e.key === 'ArrowLeft' && !isCommentsPanelOpen) {
+                        onPrev();
                     }
                 };
                 document.addEventListener('keydown', handleKeyDown);
-                return () => {
-                    document.removeEventListener('keydown', handleKeyDown);
-                };
-                // Зависимости: onClose (стабильная) и ref не нужны
-            }, [onClose]);
+                return () => document.removeEventListener('keydown', handleKeyDown);
+            }, [onClose, onNext, onPrev, isCommentsPanelOpen]);
 
             const handleSave = async () => {
                 if (!isAdmin) {
-                     console.warn("Попытка сохранения без прав администратора.");
-                     return;
+                    console.warn("Попытка сохранения без прав администратора.");
+                    return;
                 }
                 setIsSaving(true);
                 await onSaveCaption(albumId, image.timestamp, caption);
                 setIsSaving(false);
             };
 
+            const handleLikeToggle = async (e) => {
+                e.stopPropagation();
+                if (!currentUserId || isLiking) return;
+                setIsLiking(true);
+
+                // Оптимистичное обновление: сразу меняем UI
+                const wasLiked = localLikes.includes(currentUserId);
+                const newLikes = wasLiked
+                    ? localLikes.filter(id => id !== currentUserId)
+                    : [...localLikes, currentUserId];
+                setLocalLikes(newLikes);
+
+                try {
+                    await onToggleLike(albumId, image.timestamp);
+                } catch (error) {
+                    // Откатываем при ошибке
+                    setLocalLikes(likes || []);
+                    console.error("Ошибка лайка:", error);
+                } finally {
+                    setIsLiking(false);
+                }
+            };
+
+            const handleCommentSubmit = async (e) => {
+                e.preventDefault();
+                if (!currentUserId || !commentText.trim()) return;
+                await onAddComment(albumId, image.timestamp, commentText.trim());
+                setCommentText('');
+            };
+
+            const toggleCommentsPanel = (e) => {
+                e.stopPropagation();
+                setIsCommentsPanelOpen(prev => !prev);
+            };
+
+            const likeCount = localLikes.length;
+            const isLikedByCurrentUser = currentUserId ? localLikes.includes(currentUserId) : false;
+
             return (
-                <div 
+                <div
                     className="fixed inset-0 z-[60] bg-black flex justify-center items-center transition-opacity"
                     onClick={onClose}
                 >
@@ -323,17 +410,17 @@
                                 <Pencil size={24} />
                             </button>
                         )}
-                        <button 
-                            onClick={onClose} 
+                        <button
+                            onClick={onClose}
                             className="p-2 text-white hover:bg-opacity-70 transition rounded-full bg-black bg-opacity-50"
                             aria-label="Закрыть"
                         >
                             <X size={28} />
                         </button>
                     </div>
-                    
+
                     {/* --- Левая/Правая навигация --- */}
-                    <div 
+                    <div
                         className="fixed-click-zone left group"
                         onClick={(e) => { e.stopPropagation(); onPrev(); }}
                         title="Предыдущее фото (Стрелка влево)"
@@ -342,7 +429,7 @@
                             <ChevronLeft size={40} className="w-10 h-10 md:w-12 md:h-12" />
                         </button>
                     </div>
-                    <div 
+                    <div
                         className="fixed-click-zone right group"
                         onClick={(e) => { e.stopPropagation(); onNext(); }}
                         title="Следующее фото (Стрелка вправо)"
@@ -351,30 +438,30 @@
                             <ChevronRight size={40} className="w-10 h-10 md:w-12 md:h-12" />
                         </button>
                     </div>
-                    
+
                     {/* Контейнер изображения */}
-                    <div 
-                        className="w-full h-full flex justify-center items-center" 
-                        onClick={(e) => e.stopPropagation()} 
+                    <div
+                        className="w-full h-full flex justify-center items-center"
+                        onClick={(e) => e.stopPropagation()}
                     >
-                        <img 
-                            src={image.url} 
-                            alt={image.caption || "Увеличенное фото"} 
-                            className="max-w-full max-h-screen object-contain" 
-                            onError={(e) => { 
-                                e.target.onerror = null; 
-                                e.target.src = "https://placehold.co/800x600/CCCCCC/333333?text=Ошибка+загрузки"; 
-                                e.target.className = "max-w-full max-h-[70vh] object-contain p-4"; 
+                        <img
+                            src={image.url}
+                            alt={image.caption || "Увеличенное фото"}
+                            className="max-w-full max-h-screen object-contain"
+                            onError={(e) => {
+                                e.target.onerror = null;
+                                e.target.src = "https://placehold.co/800x600/CCCCCC/333333?text=Ошибка+загрузки";
+                                e.target.className = "max-w-full max-h-[70vh] object-contain p-4";
                             }}
                         />
                     </div>
-                    
-                    {/* --- Контейнер подписи и редактирования --- */}
-                    <div 
-                        className="absolute bottom-4 left-4 z-[70] max-w-sm w-full sm:w-auto" 
-                        onClick={(e) => e.stopPropagation()} 
+
+                    {/* --- Контейнер подписи и редактирования (слева снизу) --- */}
+                    <div
+                        className="absolute bottom-4 left-4 z-[70] max-w-sm w-full sm:w-auto"
+                        onClick={(e) => e.stopPropagation()}
                     >
-                        <div 
+                        <div
                             className="px-4 py-3 sm:px-6 sm:py-4 bg-transparent text-white"
                         >
                             {image.caption ? (
@@ -386,7 +473,7 @@
 
                         {/* Панель редактирования подписи (Только для Админа) */}
                         {isAdmin && (
-                            <div 
+                            <div
                                 className={`bg-white p-4 sm:p-6 rounded-xl shadow-2xl transition-all duration-300 ease-in-out mt-2 ${
                                     isEditPanelOpen ? 'block' : 'hidden'
                                 }`}
@@ -400,7 +487,7 @@
                                     maxLength={200}
                                     rows={3}
                                 />
-                                <button 
+                                <button
                                     onClick={handleSave}
                                     disabled={isSaving}
                                     className="flex items-center px-4 py-3 bg-indigo-600 text-white font-medium rounded-lg hover:bg-indigo-700 transition disabled:bg-indigo-400 shadow-md"
@@ -415,6 +502,128 @@
                             </div>
                         )}
                     </div>
+
+                    {/* Кнопки лайка и комментариев справа снизу */}
+                    <div
+                        className="absolute bottom-4 right-4 z-[70] flex flex-col space-y-3"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        {/* Кнопка лайка */}
+                        <div className="relative group">
+                            <button
+                                onClick={handleLikeToggle}
+                                disabled={!currentUserId || isLiking}
+                                className={`w-12 h-12 rounded-full flex items-center justify-center transition-all duration-200 shadow-lg ${
+                                    isLikedByCurrentUser
+                                        ? 'bg-red-500 text-white hover:bg-red-600'
+                                        : 'bg-black bg-opacity-50 text-white hover:bg-opacity-70'
+                                } disabled:opacity-50`}
+                                title={isLikedByCurrentUser ? "Убрать лайк" : "Нравится"}
+                            >
+                                <Heart
+                                    size={22}
+                                    className={`transition-transform ${isLiking ? 'scale-125' : ''} ${isLikedByCurrentUser ? 'fill-current' : ''}`}
+                                />
+                            </button>
+                            {likeCount > 0 && (
+                                <div className="absolute right-full mr-3 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-80 text-white text-sm font-medium px-3 py-1.5 rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                                    {likeCount} {likeCount === 1 ? 'лайк' : (likeCount < 5 ? 'лайка' : 'лайков')}
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Кнопка комментариев */}
+                        <div className="relative group">
+                            <button
+                                onClick={toggleCommentsPanel}
+                                className={`w-12 h-12 rounded-full flex items-center justify-center transition-all duration-200 shadow-lg ${
+                                    isCommentsPanelOpen
+                                        ? 'bg-blue-500 text-white'
+                                        : 'bg-black bg-opacity-50 text-white hover:bg-opacity-70'
+                                }`}
+                                title="Комментарии"
+                            >
+                                <MessageCircle size={22} />
+                            </button>
+                            {comments.length > 0 && (
+                                <div className="absolute right-full mr-3 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-80 text-white text-sm font-medium px-3 py-1.5 rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                                    {comments.length} {comments.length === 1 ? 'комментарий' : (comments.length < 5 ? 'комментария' : 'комментариев')}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Панель комментариев (выезжает справа) */}
+                    {isCommentsPanelOpen && (
+                        <div
+                            className="absolute right-4 bottom-4 w-80 max-h-[70vh] bg-gray-900 bg-opacity-95 backdrop-blur-sm rounded-2xl shadow-2xl z-[75] overflow-hidden animate-slide-in"
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            <div className="flex flex-col h-full max-h-[70vh]">
+                                <div className="flex items-center justify-between p-4 border-b border-gray-700">
+                                    <h3 className="text-white font-semibold text-sm">Комментарии ({comments.length})</h3>
+                                    <button
+                                        onClick={() => setIsCommentsPanelOpen(false)}
+                                        className="text-gray-400 hover:text-white transition"
+                                    >
+                                        <X size={18} />
+                                    </button>
+                                </div>
+
+                                <div className="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar">
+                                    {comments.length === 0 ? (
+                                        <p className="text-gray-400 text-sm text-center py-4">Пока нет комментариев</p>
+                                    ) : (
+                                        comments.map((comment, idx) => (
+                                            <div key={idx} className="bg-gray-800 bg-opacity-50 rounded-lg p-3 group relative">
+                                                <div className="flex items-start justify-between">
+                                                    <div className="flex-1 min-w-0">
+                                                        <p className="text-xs font-semibold text-blue-300 truncate">
+                                                            {comment.displayName || 'Аноним'}
+                                                        </p>
+                                                        <p className="text-sm text-gray-200 mt-1 break-words">
+                                                            {comment.text}
+                                                        </p>
+                                                    </div>
+                                                    {isAdmin && (
+                                                        <button
+                                                            onClick={() => onDeleteComment(albumId, image.timestamp, idx)}
+                                                            className="ml-2 p-1 text-gray-500 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
+                                                            title="Удалить комментарий"
+                                                        >
+                                                            <Trash2 size={14} />
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        ))
+                                    )}
+                                </div>
+
+                                {currentUserId && (
+                                    <form onSubmit={handleCommentSubmit} className="p-4 border-t border-gray-700">
+                                        <div className="flex items-center space-x-2">
+                                            <input
+                                                type="text"
+                                                value={commentText}
+                                                onChange={(e) => setCommentText(e.target.value)}
+                                                placeholder="Написать комментарий..."
+                                                maxLength={200}
+                                                className="flex-1 bg-gray-800 text-white text-sm rounded-full px-4 py-2 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                            />
+                                            <button
+                                                type="submit"
+                                                disabled={!commentText.trim()}
+                                                className="w-10 h-10 rounded-full bg-blue-500 text-white flex items-center justify-center hover:bg-blue-600 transition disabled:bg-gray-600 disabled:cursor-not-allowed flex-shrink-0"
+                                            >
+                                                <Send size={18} />
+                                            </button>
+                                        </div>
+                                    </form>
+                                )}
+                            </div>
+                        </div>
+                    )}
                 </div>
             );
         };
@@ -423,7 +632,6 @@
         const App = () => {
             // === УПРОЩЕННАЯ СИСТЕМА СОХРАНЕНИЯ ПОЗИЦИИ ПРОКРУТКИ ===
             const scrollPosition = useRef(0);
-            const pendingScrollRestore = useRef(null); // новое: для операций, меняющих данные
 
             const saveScrollPosition = () => {
                 scrollPosition.current = window.scrollY || document.documentElement.scrollTop;
@@ -440,13 +648,9 @@
                 }
             };
 
-            // Запоминаем позицию перед опасной операцией (удаление, добавление, перетаскивание)
-            const prepareScrollRestore = () => {
-                pendingScrollRestore.current = window.scrollY || document.documentElement.scrollTop;
-            };
-
             const [authReady, setAuthReady] = useState(false);
             const [userId, setUserId] = useState(null);
+            const [userProfile, setUserProfile] = useState(null);
             const [albums, setAlbums] = useState([]);
             const [loading, setLoading] = useState(true);
             const [error, setError] = useState(configError || null);
@@ -469,32 +673,6 @@
             const [isAlbumReorderMode, setIsAlbumReorderMode] = useState(false);
             const [albumToDelete, setAlbumToDelete] = useState(null);
             const [deleteStep, setDeleteStep] = useState(0);
-
-            // === БЛОКИРОВКА ПРОКРУТКИ ПРИ ОТКРЫТИИ УВЕЛИЧЕННОГО ФОТО ===
-            useEffect(() => {
-                if (enlargedImage) {
-                    document.body.style.overflow = 'hidden';
-                } else {
-                    document.body.style.overflow = '';
-                }
-                return () => {
-                    document.body.style.overflow = '';
-                };
-            }, [enlargedImage]);
-
-            // === ВОССТАНОВЛЕНИЕ ПОЗИЦИИ ПОСЛЕ ИЗМЕНЕНИЯ ДАННЫХ ===
-            useEffect(() => {
-                if (pendingScrollRestore.current !== null && selectedAlbum) {
-                    const savedY = pendingScrollRestore.current;
-                    // Даём время на перерисовку
-                    requestAnimationFrame(() => {
-                        requestAnimationFrame(() => {
-                            window.scrollTo({ top: savedY, behavior: 'auto' });
-                            pendingScrollRestore.current = null;
-                        });
-                    });
-                }
-            }, [selectedAlbum]);
 
             // === ИСПРАВЛЕННАЯ ЛОГИКА ОТКРЫТИЯ/ЗАКРЫТИЯ ИЗОБРАЖЕНИЯ ===
             const handleOpenImage = useCallback((image) => {
@@ -636,8 +814,23 @@
                 const unsubscribe = onAuthStateChanged(auth, (user) => {
                     if (user) {
                         setUserId(user.uid);
+                        setUserProfile({
+                            uid: user.uid,
+                            displayName: user.displayName || 'Аноним',
+                            photoURL: user.photoURL || null,
+                            isAnonymous: user.isAnonymous
+                        });
+                        if (user.uid === ADMIN_UID) {
+                            setIsAdmin(true);
+                            localStorage.setItem('isAdmin', 'true');
+                        } else {
+                            setIsAdmin(false);
+                            localStorage.removeItem('isAdmin');
+                        }
                     } else {
                         setUserId(null);
+                        setUserProfile(null);
+                        setIsAdmin(false);
                     }
                     setAuthReady(true);
                 });
@@ -655,7 +848,46 @@
                 }
             }, [isAdmin]);
 
+            useEffect(() => {
+                if (enlargedImage && selectedAlbum) {
+                    const updatedImage = selectedAlbum.images.find(
+                        img => img.timestamp === enlargedImage.timestamp
+                    );
+                    if (updatedImage) {
+                        setEnlargedImage(prev => prev ? { ...prev, ...updatedImage } : prev);
+                    }
+                }
+            }, [selectedAlbum, enlargedImage?.timestamp]);
+
             // --- ЛОГИКА АДМИНИСТРАТОРА (Login/Logout) ---
+            const handleGoogleSignIn = async () => {
+                if (!auth) {
+                    alertUser('Ошибка', 'Firebase Auth не инициализирован.');
+                    return;
+                }
+                const provider = new GoogleAuthProvider();
+                try {
+                    if (auth.currentUser && auth.currentUser.isAnonymous) {
+                        await linkWithPopup(auth.currentUser, provider);
+                    } else {
+                        await signInWithPopup(auth, provider);
+                    }
+                } catch (e) {
+                    console.error("Ошибка входа через Google:", e);
+                    alertUser('Ошибка входа через Google', e.message);
+                }
+            };
+
+            const handleSignOut = async () => {
+                if (!auth) return;
+                try {
+                    await signOut(auth);
+                    await signInAnonymously(auth);
+                } catch (e) {
+                    console.error("Ошибка выхода:", e);
+                }
+            };
+
             const handleAdminLogin = async (email, password) => {
                 if (!auth) {
                     alertUser('Ошибка', 'Firebase Auth не инициализирован.');
@@ -689,7 +921,7 @@
                 const images = allContent.filter(item => item.type !== 'divider');
 
                 if (!images || images.length === 0) return;
-                
+
                 const currentIndex = images.findIndex(img => img.timestamp === enlargedImage.timestamp);
                 if (currentIndex === -1) return;
 
@@ -699,7 +931,7 @@
                 } else {
                     nextIndex = (currentIndex - 1 + images.length) % images.length;
                 }
-                
+
                 const nextImage = images[nextIndex];
                 setEnlargedImage(nextImage);
             }, [enlargedImage, selectedAlbum]);
@@ -765,19 +997,19 @@
                             const images = Array.isArray(data.images) ? data.images : [];
                             fetchedAlbums.push({ id: doc.id, ...data, images });
                         });
-                        
+
                         // НОВАЯ ЛОГИКА СОРТИРОВКИ: сначала по orderIndex, затем по дате
                         fetchedAlbums.sort((a, b) => {
                             const orderA = a.orderIndex !== undefined ? a.orderIndex : Number.MAX_SAFE_INTEGER;
                             const orderB = b.orderIndex !== undefined ? b.orderIndex : Number.MAX_SAFE_INTEGER;
-                            
+
                             if (orderA !== orderB) return orderA - orderB;
                             return (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0);
                         });
 
                         setAlbums(fetchedAlbums);
                         setLoading(false);
-                        
+
                         setSelectedAlbum(prevSelectedAlbum => {
                             if (prevSelectedAlbum) {
                                 const updatedAlbum = fetchedAlbums.find(a => a.id === prevSelectedAlbum.id);
@@ -806,7 +1038,7 @@
             }, [userId, authReady, currentView]);
 
             // --- 3. CRUD-функции (Только для Администратора) ---
-            
+
             // === НОВЫЕ ФУНКЦИИ ДЛЯ УПРАВЛЕНИЯ АЛЬБОМАМИ ===
             const initiateDeleteAlbum = (album) => {
                 if (!isAdmin) return;
@@ -824,7 +1056,6 @@
 
                 if (deleteStep === 2) {
                     try {
-                        prepareScrollRestore(); // сохраняем позицию перед удалением
                         const collectionPath = `artifacts/${appId}/public/data/${PUBLIC_COLLECTION_NAME}`;
                         await deleteDoc(doc(db, collectionPath, albumToDelete.id));
                         console.log(`Альбом ${albumToDelete.name} удален.`);
@@ -845,7 +1076,6 @@
             const toggleAlbumVisibility = async (album) => {
                 if (!isAdmin) return;
                 try {
-                    prepareScrollRestore(); // сохраняем позицию перед изменением видимости (на всякий случай)
                     const collectionPath = `artifacts/${appId}/public/data/${PUBLIC_COLLECTION_NAME}`;
                     await updateDoc(doc(db, collectionPath, album.id), {
                         hidden: !album.hidden
@@ -868,10 +1098,9 @@
                 }
 
                 try {
-                    prepareScrollRestore(); // сохраняем позицию перед переименованием
                     const collectionPath = `artifacts/${appId}/public/data/${PUBLIC_COLLECTION_NAME}`;
                     const albumRef = doc(db, collectionPath, albumId);
-                    
+
                     await updateDoc(albumRef, {
                         name: newName.trim(),
                     });
@@ -885,7 +1114,7 @@
                     return false;
                 }
             };
-            
+
             const updatePhotoCaption = async (albumId, photoTimestamp, newCaption) => {
                 if (!isAdmin) {
                     alertUser('Ошибка доступа', 'Вы должны быть Администратором для редактирования подписей.');
@@ -901,7 +1130,7 @@
                     const collectionPath = `artifacts/${appId}/public/data/${PUBLIC_COLLECTION_NAME}`;
                     const albumRef = doc(db, collectionPath, albumId);
                     const currentAlbum = albums.find(a => a.id === albumId);
-                    
+
                     if (currentAlbum) {
                         const updatedImages = currentAlbum.images.map(item => {
                             if (item.timestamp === photoTimestamp && item.type !== 'divider') {
@@ -909,7 +1138,7 @@
                             }
                             return item;
                         });
-                        
+
                         await updateDoc(albumRef, {
                             images: updatedImages,
                         });
@@ -920,7 +1149,7 @@
                             }
                             return prev;
                         });
-                        
+
                         console.log(`Подпись для фото ${photoTimestamp} обновлена: "${newCaption}"`);
                     }
                 } catch (e) {
@@ -928,7 +1157,7 @@
                     alertUser('Ошибка', 'Не удалось сохранить подпись.');
                 }
             };
-            
+
             const deletePhoto = async (albumId, itemToDelete) => {
                 if (!isAdmin) {
                     alertUser('Ошибка доступа', 'Вы должны быть Администратором для удаления элементов.');
@@ -940,25 +1169,31 @@
                     return;
                 }
 
-                prepareScrollRestore(); // ЗАПОМИНАЕМ ПОЗИЦИЮ ПЕРЕД УДАЛЕНИЕМ
+                // Сохраняем позицию перед удалением
+                saveScrollPosition();
 
                 try {
                     const collectionPath = `artifacts/${appId}/public/data/${PUBLIC_COLLECTION_NAME}`;
                     const albumRef = doc(db, collectionPath, albumId);
                     const currentAlbum = albums.find(a => a.id === albumId);
-                    
+
                     if (currentAlbum) {
                         const updatedImages = currentAlbum.images.filter(item => item.timestamp !== itemToDelete.timestamp);
-                        
+
                         await updateDoc(albumRef, {
                             images: updatedImages,
                         });
-                        
+
                         console.log(`Элемент (тип: ${itemToDelete.type || 'photo'}) ${itemToDelete.timestamp} удален.`);
-                        
+
                         if (enlargedImage && enlargedImage.timestamp === itemToDelete.timestamp) {
                             handleCloseImage();
                         }
+
+                        // Восстанавливаем позицию после завершения операции
+                        setTimeout(() => {
+                            restoreScrollPosition();
+                        }, 100);
                     }
                 } catch (e) {
                     console.error("Ошибка при удалении элемента:", e);
@@ -980,10 +1215,10 @@
 
             const handleAlbumDrop = async () => {
                 if (!isAlbumReorderMode || !isAdmin) return;
-                
+
                 const draggedId = dragItemUniqueId.current;
                 const targetId = dragOverItemUniqueId.current;
-                
+
                 if (!draggedId || !targetId || draggedId === targetId) {
                     dragItemUniqueId.current = null; dragOverItemUniqueId.current = null;
                     return;
@@ -1000,17 +1235,15 @@
 
                 setAlbums(newAlbums);
 
-                prepareScrollRestore(); // ЗАПОМИНАЕМ ПОЗИЦИЮ ПЕРЕД СОХРАНЕНИЕМ ПОРЯДКА
-
                 try {
                     const batch = writeBatch(db);
                     const collectionPath = `artifacts/${appId}/public/data/${PUBLIC_COLLECTION_NAME}`;
-                    
+
                     newAlbums.forEach((album, index) => {
                         const ref = doc(db, collectionPath, album.id);
                         batch.update(ref, { orderIndex: index });
                     });
-                    
+
                     await batch.commit();
                     console.log("Порядок альбомов обновлен");
                 } catch (e) {
@@ -1070,8 +1303,6 @@
                     return;
                 }
 
-                prepareScrollRestore(); // ЗАПОМИНАЕМ ПОЗИЦИЮ ПЕРЕД СОХРАНЕНИЕМ НОВОГО ПОРЯДКА
-
                 const collectionPath = `artifacts/${appId}/public/data/${PUBLIC_COLLECTION_NAME}`;
                 const albumRef = doc(db, collectionPath, selectedAlbum.id);
                 const list = [...selectedAlbum.images];
@@ -1099,7 +1330,7 @@
                     console.error("Ошибка обновления порядка:", error);
                     alertUser('Ошибка', 'Не удалось сохранить новый порядок элементов.');
                 }
-                
+
                 dragItemUniqueId.current = null;
                 dragOverItemUniqueId.current = null;
                 // Восстанавливаем позицию после перетаскивания
@@ -1118,23 +1349,25 @@
                     return;
                 }
 
-                prepareScrollRestore(); // ЗАПОМИНАЕМ ПОЗИЦИЮ ПЕРЕД ДОБАВЛЕНИЕМ
+                // Сохраняем позицию перед добавлением
+                saveScrollPosition();
 
                 try {
                     const collectionPath = `artifacts/${appId}/public/data/${PUBLIC_COLLECTION_NAME}`;
                     const albumRef = doc(db, collectionPath, albumId);
-                    
+
                     const newDividerEntry = {
                         type: 'divider',
                         timestamp: Date.now(),
                         text: text.trim(),
                     };
-                    
+
                     await updateDoc(albumRef, {
                         images: arrayUnion(newDividerEntry)
                     });
 
-                    setIsAddDividerModalOpen(false);
+                    // Закрываем модальное окно, что восстановит позицию
+                    handleCloseAddDividerModal();
                     console.log(`Разделитель "${text}" добавлен в альбом ${albumId}.`);
                 } catch (e) {
                     console.error("Ошибка при добавлении разделителя:", e);
@@ -1153,15 +1386,14 @@
                 }
 
                 try {
-                    prepareScrollRestore(); // сохраняем позицию перед созданием альбома
                     const collectionPath = `artifacts/${appId}/public/data/${PUBLIC_COLLECTION_NAME}`;
                     // Добавляем orderIndex в конец списка
                     const maxOrderIndex = albums.length > 0 ? Math.max(...albums.map(a => a.orderIndex || 0)) : 0;
-                    
+
                     await addDoc(collection(db, collectionPath), {
                         name: name.trim(),
                         createdAt: serverTimestamp(),
-                        images: [], 
+                        images: [],
                         hidden: false,
                         orderIndex: maxOrderIndex + 1
                     });
@@ -1183,25 +1415,29 @@
                     return;
                 }
 
-                prepareScrollRestore(); // ЗАПОМИНАЕМ ПОЗИЦИЮ ПЕРЕД ДОБАВЛЕНИЕМ ФОТО
+                // Сохраняем позицию перед добавлением
+                saveScrollPosition();
 
                 try {
                     const collectionPath = `artifacts/${appId}/public/data/${PUBLIC_COLLECTION_NAME}`;
                     const albumRef = doc(db, collectionPath, albumId);
-                    
+
                     const newImageEntry = {
                         url: url.trim(),
                         type: 'photo',
                         timestamp: Date.now(),
                         aspectRatio: parseFloat(aspectRatio) > 0 ? parseFloat(aspectRatio) : 1.0,
-                        caption: ''
+                        caption: '',
+                        likes: [],
+                        comments: []
                     };
-                    
+
                     await updateDoc(albumRef, {
                         images: arrayUnion(newImageEntry)
                     });
 
-                    setIsAddPhotoModalOpen(false);
+                    // Закрываем модальное окно, что восстановит позицию
+                    handleCloseAddPhotoModal();
                     console.log(`Ссылка добавлена в альбом ${albumId}.`);
                 } catch (e) {
                     console.error("Ошибка при добавлении ссылки:", e);
@@ -1209,12 +1445,75 @@
                 }
             };
 
+            // ========== ЛАЙКИ И КОММЕНТАРИИ ==========
+            const toggleLike = async (albumId, photoTimestamp) => {
+                if (!userId || !db) return;
+                const collectionPath = `artifacts/${appId}/public/data/${PUBLIC_COLLECTION_NAME}`;
+                const albumRef = doc(db, collectionPath, albumId);
+                const currentAlbum = albums.find(a => a.id === albumId);
+                if (!currentAlbum) return;
+                const updatedImages = currentAlbum.images.map(item => {
+                    if (item.timestamp === photoTimestamp) {
+                        const likes = item.likes || [];
+                        const liked = likes.includes(userId);
+                        return {
+                            ...item,
+                            likes: liked ? likes.filter(id => id !== userId) : [...likes, userId]
+                        };
+                    }
+                    return item;
+                });
+                await updateDoc(albumRef, { images: updatedImages });
+            };
+
+            const addComment = async (albumId, photoTimestamp, text) => {
+                if (!userId || !db || !userProfile) return;
+                const displayName = userProfile.displayName || 'Аноним';
+                const collectionPath = `artifacts/${appId}/public/data/${PUBLIC_COLLECTION_NAME}`;
+                const albumRef = doc(db, collectionPath, albumId);
+                const currentAlbum = albums.find(a => a.id === albumId);
+                if (!currentAlbum) return;
+                const newComment = {
+                    userId: userId,
+                    displayName: displayName,
+                    text: text,
+                    timestamp: Date.now()
+                };
+                const updatedImages = currentAlbum.images.map(item => {
+                    if (item.timestamp === photoTimestamp) {
+                        const comments = item.comments || [];
+                        return { ...item, comments: [...comments, newComment] };
+                    }
+                    return item;
+                });
+                await updateDoc(albumRef, { images: updatedImages });
+            };
+
+            const deleteComment = async (albumId, photoTimestamp, commentIndex) => {
+                if (!isAdmin || !db) return;
+                const collectionPath = `artifacts/${appId}/public/data/${PUBLIC_COLLECTION_NAME}`;
+                const albumRef = doc(db, collectionPath, albumId);
+                const currentAlbum = albums.find(a => a.id === albumId);
+                if (!currentAlbum) return;
+                const updatedImages = currentAlbum.images.map(item => {
+                    if (item.timestamp === photoTimestamp) {
+                        const comments = item.comments || [];
+                        return {
+                            ...item,
+                            comments: comments.filter((_, idx) => idx !== commentIndex)
+                        };
+                    }
+                    return item;
+                });
+                await updateDoc(albumRef, { images: updatedImages });
+            };
+
             // --- Вспомогательные компоненты ---
             const AlbumCard = ({ album }) => {
                 const firstPhoto = album.images.find(item => item.type !== 'divider' && item.url);
                 const previewUrl = firstPhoto ? firstPhoto.url : null;
                 const imageCount = album.images.filter(item => item.type !== 'divider').length;
-                
+
                 const opacityClass = album.hidden ? 'opacity-60 grayscale' : 'opacity-100';
                 const hiddenBadge = album.hidden ? (
                     <div className="absolute top-2 left-2 bg-black/60 text-white px-2 py-1 rounded text-xs flex items-center">
@@ -1226,7 +1525,7 @@
                 const isDragOver = isAlbumReorderMode && dragOverItemUniqueId.current === album.id;
 
                 return (
-                    <div 
+                    <div
                         className={`
                             relative group transition-all duration-200
                             ${isAlbumReorderMode ? 'cursor-move' : ''}
@@ -1239,15 +1538,15 @@
                         onDragOver={(e) => e.preventDefault()}
                         onDrop={handleAlbumDrop}
                     >
-                        <div 
+                        <div
                             onClick={() => handleOpenAlbum(album)}
                             className={`bg-white rounded-xl shadow-lg hover:shadow-xl transition-shadow cursor-pointer overflow-hidden ${opacityClass} ${isDragOver ? 'ring-2 ring-indigo-500' : ''}`}
                         >
                             <div className="w-full bg-gray-200 flex items-center justify-center relative">
                                 {previewUrl ? (
-                                    <img 
-                                        src={previewUrl} 
-                                        alt={`Превью ${album.name}`} 
+                                    <img
+                                        src={previewUrl}
+                                        alt={`Превью ${album.name}`}
                                         className="w-full h-full object-cover"
                                         onError={(e) => { e.target.onerror = null; e.target.src = "https://placehold.co/600x400/CCCCCC/333333?text=Ошибка+загрузки"; }}
                                     />
@@ -1261,7 +1560,7 @@
                                 <p className="text-sm text-gray-500 mt-1">{imageCount} {imageCount === 1 ? 'фото' : (imageCount > 1 && imageCount < 5 ? 'фото' : 'фотографий')}</p>
                             </div>
                         </div>
-                        
+
                         {/* КНОПКИ УПРАВЛЕНИЯ АЛЬБОМОМ (Только Админ) */}
                         {isAdmin && !isAlbumReorderMode && (
                             <div className="absolute top-2 right-2 flex flex-col space-y-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
@@ -1273,7 +1572,7 @@
                                 >
                                     <Edit size={16} />
                                 </button>
-                                
+
                                 {/* Скрыть/Показать */}
                                 <button
                                     onClick={(e) => { e.stopPropagation(); toggleAlbumVisibility(album); }}
@@ -1303,7 +1602,7 @@
                     <p className="ml-4 text-gray-600">Загрузка данных...</p>
                 </div>
             );
-            
+
             const CalculationSpinner = () => (
                 <div className="flex justify-center items-center h-full min-h-[100px] my-8">
                      <Loader className="animate-spin text-indigo-500 mr-3" size={24} />
@@ -1313,10 +1612,10 @@
 
             const Modal = ({ isOpen, onClose, title, children }) => {
                 if (!isOpen) return null;
-                
+
                 return (
                     <div className="fixed inset-0 z-50 bg-black bg-opacity-50 flex justify-center items-center p-4" onClick={onClose}>
-                        <div 
+                        <div
                             className="bg-white rounded-xl shadow-2xl w-full max-w-md p-6 animate-fade-in-up"
                             onClick={(e) => e.stopPropagation()}
                         >
@@ -1342,7 +1641,7 @@
                             <div className="mb-4 flex justify-center text-red-500">
                                 <AlertTriangle size={48} />
                             </div>
-                            
+
                             {deleteStep === 1 && (
                                 <>
                                     <h3 className="text-xl font-bold text-gray-800 mb-2">Удалить альбом?</h3>
@@ -1368,7 +1667,7 @@
                     </div>
                 );
             };
-            
+
             const RenameAlbumModal = () => {
                 const [newName, setNewName] = useState(albumToRename?.name || '');
                 const [isSaving, setIsSaving] = useState(false);
@@ -1376,7 +1675,7 @@
                 useEffect(() => {
                     setNewName(albumToRename?.name || '');
                 }, [albumToRename]);
-                
+
                 const handleSubmit = async (e) => {
                     e.preventDefault();
                     if (newName.trim() && albumToRename) {
@@ -1401,8 +1700,8 @@
                                 <button type="button" onClick={handleCloseRenameModal} className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition">
                                     Отмена
                                 </button>
-                                <button 
-                                    type="submit" 
+                                <button
+                                    type="submit"
                                     disabled={isSaving || !newName.trim() || newName.trim() === albumToRename?.name}
                                     className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 transition shadow-md disabled:bg-indigo-400"
                                 >
@@ -1413,7 +1712,7 @@
                     </Modal>
                 );
             };
-            
+
             const AdminLoginModal = () => {
                 const [email, setEmail] = useState('');
                 const [password, setPassword] = useState('');
@@ -1469,7 +1768,7 @@
 
             const AddAlbumModal = () => {
                 const [albumName, setAlbumName] = useState('');
-                
+
                 const handleSubmit = (e) => {
                     e.preventDefault();
                     if (albumName.trim()) {
@@ -1503,7 +1802,7 @@
 
             const AddDividerModal = () => {
                 const [dividerText, setDividerText] = useState('');
-                
+
                 const handleSubmit = (e) => {
                     e.preventDefault();
                     if (dividerText.trim() && selectedAlbum) {
@@ -1619,15 +1918,15 @@
                                         required
                                     />
                                     <p className="text-xs text-gray-500 mt-1">
-                                        Обязательно укажите число: 1.0 (квадрат), 1.77 (16:9), 0.56 (9:16). 
+                                        Обязательно укажите число: 1.0 (квадрат), 1.77 (16:9), 0.56 (9:16).
                                     </p>
                                 </div>
                                 {previewImage && (
                                     <div className="p-3 bg-gray-50 rounded-lg border border-gray-200">
                                         <p className="text-xs text-gray-600 mb-2">Предпросмотр:</p>
-                                        <img 
-                                            src={previewImage} 
-                                            alt="Превью" 
+                                        <img
+                                            src={previewImage}
+                                            alt="Превью"
                                             className="w-full max-h-32 object-contain rounded"
                                             onError={(e) => { e.target.onerror = null; setPreviewImage(null); console.log("Не удалось загрузить превью. Проверьте ссылку."); }}
                                         />
@@ -1652,9 +1951,9 @@
                                 <button type="button" onClick={handleCloseAddPhotoModal} className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition">
                                     Отмена
                                 </button>
-                                <button 
-                                    type="submit" 
-                                    disabled={albums.length === 0 || !aspectRatio || isNaN(parseFloat(aspectRatio.replace(',', '.'))) || parseFloat(aspectRatio.replace(',', '.')) <= 0} 
+                                <button
+                                    type="submit"
+                                    disabled={albums.length === 0 || !aspectRatio || isNaN(parseFloat(aspectRatio.replace(',', '.'))) || parseFloat(aspectRatio.replace(',', '.')) <= 0}
                                     className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 transition shadow-md disabled:bg-indigo-400"
                                 >
                                     Добавить фото
@@ -1664,7 +1963,7 @@
                     </Modal>
                 );
             };
-            
+
             const AlbumPhotoView = ({ onOpenImage }) => {
                 if (!selectedAlbum) return <HomeView />;
 
@@ -1692,29 +1991,29 @@
 
                 const justifiedRows = useMemo(() => {
                     if (containerWidth <= 0) return [];
-                    
+
                     const rows = [];
-                    
+
                     const calculateGapWidth = (count) => (count - 1) * GALLERY_GAP_PX;
 
                     // УЛУЧШЕННАЯ функция для оптимального распределения фото
                     const distributePhotosOptimally = (photos, targetHeight, containerWidth) => {
                         if (photos.length === 0) return [];
-                        
+
                         const rows = [];
-                        
+
                         // Основной алгоритм распределения
                         let startIndex = 0;
-                        
+
                         while (startIndex < photos.length) {
                             let bestRow = [photos[startIndex]];
                             let bestCost = calculateRowCost(bestRow, targetHeight, containerWidth);
-                            
+
                             // Пробуем добавлять фото в ряд
                             for (let endIndex = startIndex + 1; endIndex <= Math.min(startIndex + 10, photos.length); endIndex++) {
                                 const candidateRow = photos.slice(startIndex, endIndex + 1);
                                 const candidateCost = calculateRowCost(candidateRow, targetHeight, containerWidth);
-                                
+
                                 if (candidateCost < bestCost) {
                                     bestRow = candidateRow;
                                     bestCost = candidateCost;
@@ -1722,7 +2021,7 @@
                                     break;
                                 }
                             }
-                            
+
                             // Рассчитываем финальную высоту для выбранного ряда
                             const totalAspect = bestRow.reduce((sum, img) => sum + img.aspectRatio, 0);
                             const gapWidth = calculateGapWidth(bestRow.length);
@@ -1730,44 +2029,44 @@
                                 (containerWidth - gapWidth) / totalAspect,
                                 TARGET_ROW_HEIGHT * MAX_ROW_HEIGHT_MULTIPLIER
                             );
-                            
-                            const minAllowedHeight = startIndex + bestRow.length >= photos.length ? 
-                                TARGET_ROW_HEIGHT * 0.5 : 
+
+                            const minAllowedHeight = startIndex + bestRow.length >= photos.length ?
+                                TARGET_ROW_HEIGHT * 0.5 :
                                 TARGET_ROW_HEIGHT * 0.7;
-                            
+
                             const clampedHeight = Math.max(finalHeight, minAllowedHeight);
-                            
+
                             rows.push({
                                 photos: bestRow,
                                 height: clampedHeight
                             });
-                            
+
                             startIndex += bestRow.length;
                         }
-                        
+
                         // === УЛУЧШЕННАЯ ПОСТ-ОБРАБОТКА: Оптимизация последних рядов ===
                         if (rows.length >= 2) {
                             const lastRow = rows[rows.length - 1];
                             const secondLastRow = rows[rows.length - 2];
-                            
+
                             // Рассчитываем ширину последнего ряда
-                            const lastRowTotalWidth = lastRow.photos.reduce((sum, img) => sum + img.aspectRatio * lastRow.height, 0) + 
+                            const lastRowTotalWidth = lastRow.photos.reduce((sum, img) => sum + img.aspectRatio * lastRow.height, 0) +
                                                     calculateGapWidth(lastRow.photos.length);
-                            
+
                             const lastRowFillRatio = lastRowTotalWidth / containerWidth;
-                            
+
                             // СЛУЧАЙ 1: Если в последнем ряду 2 или меньше фото - ВСЕГДА объединяем с предпоследним
                             if (lastRow.photos.length < 3) {
                                 const mergedPhotos = [...secondLastRow.photos, ...lastRow.photos];
                                 const totalAspect = mergedPhotos.reduce((sum, img) => sum + img.aspectRatio, 0);
                                 const gapWidth = calculateGapWidth(mergedPhotos.length);
-                                
+
                                 // Пересчитываем высоту объединенного ряда
                                 const newHeight = Math.min(
                                     (containerWidth - gapWidth) / totalAspect,
                                     TARGET_ROW_HEIGHT * MAX_ROW_HEIGHT_MULTIPLIER
                                 );
-                                
+
                                 // Проверяем, что новая высота не слишком маленькая
                                 if (newHeight >= TARGET_ROW_HEIGHT * 0.4) {
                                     rows[rows.length - 2] = {
@@ -1784,35 +2083,35 @@
                                 let bestNewFillRatio = lastRowFillRatio;
                                 let bestNewSecondLastHeight = secondLastRow.height;
                                 let bestNewLastHeight = lastRow.height;
-                                
+
                                 for (let moveCount = 1; moveCount <= Math.min(3, secondLastRow.photos.length - 1); moveCount++) {
                                     const newSecondLastPhotos = secondLastRow.photos.slice(0, -moveCount);
                                     const newLastPhotos = [...secondLastRow.photos.slice(-moveCount), ...lastRow.photos];
-                                    
+
                                     // Пересчитываем высоты
                                     const newSecondLastAspect = newSecondLastPhotos.reduce((sum, img) => sum + img.aspectRatio, 0);
                                     const newLastAspect = newLastPhotos.reduce((sum, img) => sum + img.aspectRatio, 0);
-                                    
+
                                     const newSecondLastGap = calculateGapWidth(newSecondLastPhotos.length);
                                     const newLastGap = calculateGapWidth(newLastPhotos.length);
-                                    
+
                                     const newSecondLastHeight = Math.min(
                                         (containerWidth - newSecondLastGap) / newSecondLastAspect,
                                         TARGET_ROW_HEIGHT * MAX_ROW_HEIGHT_MULTIPLIER
                                     );
-                                    
+
                                     const newLastHeight = Math.min(
                                         (containerWidth - newLastGap) / newLastAspect,
                                         TARGET_ROW_HEIGHT * MAX_ROW_HEIGHT_MULTIPLIER
                                     );
-                                    
+
                                     // Проверяем минимальные высоты
                                     if (newSecondLastHeight >= TARGET_ROW_HEIGHT * 0.45 && newLastHeight >= TARGET_ROW_HEIGHT * 0.45) {
                                         // Рассчитываем новое заполнение последнего ряда
-                                        const newLastRowWidth = newLastPhotos.reduce((sum, img) => sum + img.aspectRatio * newLastHeight, 0) + 
+                                        const newLastRowWidth = newLastPhotos.reduce((sum, img) => sum + img.aspectRatio * newLastHeight, 0) +
                                                               calculateGapWidth(newLastPhotos.length);
                                         const newLastRowFillRatio = newLastRowWidth / containerWidth;
-                                        
+
                                         // Выбираем вариант с лучшим заполнением
                                         if (newLastRowFillRatio > bestNewFillRatio) {
                                             bestMoveCount = moveCount;
@@ -1822,12 +2121,12 @@
                                         }
                                     }
                                 }
-                                
+
                                 // Если нашли хорошее перераспределение, применяем его
                                 if (bestMoveCount > 0 && bestNewFillRatio > lastRowFillRatio + 0.1) {
                                     const newSecondLastPhotos = secondLastRow.photos.slice(0, -bestMoveCount);
                                     const newLastPhotos = [...secondLastRow.photos.slice(-bestMoveCount), ...lastRow.photos];
-                                    
+
                                     rows[rows.length - 2] = {
                                         photos: newSecondLastPhotos,
                                         height: bestNewSecondLastHeight
@@ -1843,35 +2142,35 @@
                                 // АГРЕССИВНО: Пробуем переместить 1-2 фото из предпоследнего ряда
                                 for (let moveCount = 1; moveCount <= 2; moveCount++) {
                                     if (secondLastRow.photos.length - moveCount < 2) break;
-                                    
+
                                     const newSecondLastPhotos = secondLastRow.photos.slice(0, -moveCount);
                                     const newLastPhotos = [...secondLastRow.photos.slice(-moveCount), ...lastRow.photos];
-                                    
+
                                     const newSecondLastAspect = newSecondLastPhotos.reduce((sum, img) => sum + img.aspectRatio, 0);
                                     const newLastAspect = newLastPhotos.reduce((sum, img) => sum + img.aspectRatio, 0);
-                                    
+
                                     const newSecondLastGap = calculateGapWidth(newSecondLastPhotos.length);
                                     const newLastGap = calculateGapWidth(newLastPhotos.length);
-                                    
+
                                     const newSecondLastHeight = Math.min(
                                         (containerWidth - newSecondLastGap) / newSecondLastAspect,
                                         TARGET_ROW_HEIGHT * MAX_ROW_HEIGHT_MULTIPLIER
                                     );
-                                    
+
                                     const newLastHeight = Math.min(
                                         (containerWidth - newLastGap) / newLastAspect,
                                         TARGET_ROW_HEIGHT * MAX_ROW_HEIGHT_MULTIPLIER
                                     );
-                                    
+
                                     // Проверяем, что улучшилось заполнение
-                                    const newLastRowWidth = newLastPhotos.reduce((sum, img) => sum + img.aspectRatio * newLastHeight, 0) + 
+                                    const newLastRowWidth = newLastPhotos.reduce((sum, img) => sum + img.aspectRatio * newLastHeight, 0) +
                                                           calculateGapWidth(newLastPhotos.length);
                                     const newLastRowFillRatio = newLastRowWidth / containerWidth;
-                                    
-                                    if (newLastRowFillRatio > lastRowFillRatio + 0.15 && 
-                                        newSecondLastHeight >= TARGET_ROW_HEIGHT * 0.4 && 
+
+                                    if (newLastRowFillRatio > lastRowFillRatio + 0.15 &&
+                                        newSecondLastHeight >= TARGET_ROW_HEIGHT * 0.4 &&
                                         newLastHeight >= TARGET_ROW_HEIGHT * 0.4) {
-                                        
+
                                         rows[rows.length - 2] = {
                                             photos: newSecondLastPhotos,
                                             height: newSecondLastHeight
@@ -1889,27 +2188,27 @@
                                 // Рассчитываем, сколько фото нужно переместить для оптимального заполнения
                                 const targetLastRowCount = Math.min(6, Math.max(4, Math.floor(secondLastRow.photos.length * 0.4)));
                                 const photosToMove = targetLastRowCount - lastRow.photos.length;
-                                
+
                                 if (photosToMove > 0 && secondLastRow.photos.length - photosToMove >= 4) {
                                     const newSecondLastPhotos = secondLastRow.photos.slice(0, -photosToMove);
                                     const newLastPhotos = [...secondLastRow.photos.slice(-photosToMove), ...lastRow.photos];
-                                    
+
                                     const newSecondLastAspect = newSecondLastPhotos.reduce((sum, img) => sum + img.aspectRatio, 0);
                                     const newLastAspect = newLastPhotos.reduce((sum, img) => sum + img.aspectRatio, 0);
-                                    
+
                                     const newSecondLastGap = calculateGapWidth(newSecondLastPhotos.length);
                                     const newLastGap = calculateGapWidth(newLastPhotos.length);
-                                    
+
                                     const newSecondLastHeight = Math.min(
                                         (containerWidth - newSecondLastGap) / newSecondLastAspect,
                                         TARGET_ROW_HEIGHT * MAX_ROW_HEIGHT_MULTIPLIER
                                     );
-                                    
+
                                     const newLastHeight = Math.min(
                                         (containerWidth - newLastGap) / newLastAspect,
                                         TARGET_ROW_HEIGHT * MAX_ROW_HEIGHT_MULTIPLIER
                                     );
-                                    
+
                                     // Проверяем, что высоты в допустимых пределах
                                     if (newSecondLastHeight >= TARGET_ROW_HEIGHT * 0.4 && newLastHeight >= TARGET_ROW_HEIGHT * 0.4) {
                                         rows[rows.length - 2] = {
@@ -1938,43 +2237,43 @@
                                 const desiredHeight = (containerWidth - gapWidth) / totalAspect;
                                 // Ограничиваем максимальной высотой
                                 const maxAllowedHeight = TARGET_ROW_HEIGHT * (MAX_ROW_HEIGHT_MULTIPLIER + 0.3);
-                                
+
                                 const newHeight = Math.min(desiredHeight, maxAllowedHeight);
-                                
+
                                 // Если новая высота не меньше текущей (увеличиваем) и при этом не превышает максимальную, то применяем
                                 if (newHeight >= row.height && newHeight <= maxAllowedHeight) {
                                     row.height = newHeight;
                                 }
                             }
                         }
-                        
+
                         return rows;
                     };
 
                     // Функция для расчета "стоимости" ряда
                     const calculateRowCost = (rowPhotos, targetHeight, containerWidth) => {
                         if (rowPhotos.length === 0) return Infinity;
-                        
+
                         const totalAspect = rowPhotos.reduce((sum, img) => sum + img.aspectRatio, 0);
                         const gapWidth = (rowPhotos.length - 1) * GALLERY_GAP_PX;
                         const actualHeight = (containerWidth - gapWidth) / totalAspect;
-                        
+
                         // Штрафуем за отклонение от целевой высоты
                         const heightDiff = Math.abs(actualHeight - targetHeight) / targetHeight;
-                        
+
                         // Штрафуем за слишком малое количество фото в ряду
                         const countPenalty = rowPhotos.length < 2 ? 0.3 : 0;
-                        
+
                         // Штрафуем за слишком большое отклонение высоты
                         const extremeHeightPenalty = actualHeight > targetHeight * 2 ? 1 : 0;
-                        
+
                         return heightDiff + countPenalty + extremeHeightPenalty;
                     };
 
                     // Сначала группируем контент по разделам
                     const sections = [];
                     let currentSection = [];
-                    
+
                     for (const item of allContent) {
                         if (item.type === 'divider') {
                             if (currentSection.length > 0) {
@@ -1994,27 +2293,27 @@
                     for (const section of sections) {
                         if (section.type === 'divider') {
                             // Добавляем разделитель
-                            rows.push({ 
-                                type: 'dividerRow', 
-                                content: section.item, 
-                                uniqueId: section.item.timestamp 
+                            rows.push({
+                                type: 'dividerRow',
+                                content: section.item,
+                                uniqueId: section.item.timestamp
                             });
                             continue;
                         }
 
                         // Для секции с фото используем оптимизированное распределение
-                        const sectionPhotos = section.items.filter(item => 
+                        const sectionPhotos = section.items.filter(item =>
                             item.type !== 'divider' && item.aspectRatio > 0 && item.url
                         );
-                        
+
                         if (sectionPhotos.length === 0) continue;
-                        
+
                         const photoRows = distributePhotosOptimally(
-                            sectionPhotos, 
-                            TARGET_ROW_HEIGHT, 
+                            sectionPhotos,
+                            TARGET_ROW_HEIGHT,
                             containerWidth
                         );
-                        
+
                         // Преобразуем ряды в нужный формат
                         for (const row of photoRows) {
                             const rowContent = row.photos.map(photo => ({
@@ -2022,15 +2321,15 @@
                                 height: row.height,
                                 width: photo.aspectRatio * row.height,
                             }));
-                            
-                            rows.push({ 
-                                type: 'photoRow', 
-                                content: rowContent, 
-                                uniqueId: Date.now() + Math.random() 
+
+                            rows.push({
+                                type: 'photoRow',
+                                content: rowContent,
+                                uniqueId: Date.now() + Math.random()
                             });
                         }
                     }
-                    
+
                     return rows;
                 }, [allContent, containerWidth]);
 
@@ -2039,22 +2338,22 @@
 
                 return (
                     <div className="py-0 md:py-0 pt-0 md:pt-0">
-                        <div 
+                        <div
                             ref={albumRef}
-                            className="w-full" 
+                            className="w-full"
                             onDrop={isReorderMode && isAdmin ? handleDrop : undefined}
                             onDragOver={isReorderMode && isAdmin ? handleDragOver : undefined}
                         >
                             {containerWidth === 0 && allContent.length > 0 && <CalculationSpinner />}
-                            
+
                             {(containerWidth > 0 && justifiedRows.length > 0) && justifiedRows.map((rowWrapper) => {
                                 const key = rowWrapper.uniqueId;
 
                                 if (rowWrapper.type === 'dividerRow') {
                                     const divider = rowWrapper.content;
                                     return (
-                                        <div 
-                                            key={key} 
+                                        <div
+                                            key={key}
                                             className={`w-full my-0 flex items-center justify-center relative ${
                                                 isReorderMode ? 'cursor-grab py-2' : ''
                                             } ${
@@ -2071,9 +2370,9 @@
                                                 {divider.text}
                                             </h2>
                                             <div className="w-full h-px bg-gray-300 mx-4 hidden sm:block"></div>
-                                            
+
                                             {isReorderMode && isAdmin && (
-                                                <div 
+                                                <div
                                                     className="absolute top-1/2 left-2 transform -translate-y-1/2 bg-black/50 text-white p-1 rounded-full opacity-100 transition duration-200 cursor-grab z-20"
                                                     title="Перетащить разделитель"
                                                 >
@@ -2082,8 +2381,8 @@
                                             )}
                                             {isDeleteMode && isAdmin && (
                                                 <button
-                                                    onClick={(e) => { 
-                                                        e.stopPropagation(); 
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
                                                         deletePhoto(selectedAlbum.id, divider);
                                                     }}
                                                     className="absolute top-1/2 right-2 transform -translate-y-1/2 bg-red-600 text-white p-1.5 rounded-full opacity-100 transition duration-200 hover:bg-red-700 shadow-lg z-20"
@@ -2107,8 +2406,8 @@
                                             const uniqueId = image.timestamp;
 
                                             return (
-                                                <div 
-                                                    key={uniqueId} 
+                                                <div
+                                                    key={uniqueId}
                                                     onClick={!isDeleteMode && !isReorderMode ? () => onOpenImage(image) : undefined}
                                                     draggable={isReorderMode && isAdmin}
                                                     onDragStart={isReorderMode && isAdmin ? (e) => handleDragStart(e, uniqueId) : undefined}
@@ -2126,20 +2425,20 @@
                                                         marginRight: imageIndex < row.length - 1 ? `${GALLERY_GAP_PX}px` : '0',
                                                     }}
                                                 >
-                                                    <img 
-                                                        src={image.url} 
-                                                        alt={image.caption || `Фото ${key}-${imageIndex + 1}`} 
-                                                        className="w-full h-full object-cover" 
+                                                    <img
+                                                        src={image.url}
+                                                        alt={image.caption || `Фото ${key}-${imageIndex + 1}`}
+                                                        className="w-full h-full object-cover"
                                                         style={{ width: '100%', height: '100%' }}
-                                                        onError={(e) => { 
-                                                            e.target.onerror = null; 
-                                                            e.target.src = "https://placehold.co/400x400/CCCCCC/333333?text=URL+недоступен"; 
+                                                        onError={(e) => {
+                                                            e.target.onerror = null;
+                                                            e.target.src = "https://placehold.co/400x400/CCCCCC/333333?text=URL+недоступен";
                                                         }}
                                                     />
-                                                    
+
                                                     {isDeleteMode && isAdmin && (
                                                         <button
-                                                            onClick={(e) => { 
+                                                            onClick={(e) => {
                                                                 e.stopPropagation();
                                                                 deletePhoto(selectedAlbum.id, image);
                                                             }}
@@ -2151,7 +2450,7 @@
                                                     )}
 
                                                     {isReorderMode && isAdmin && (
-                                                        <div 
+                                                        <div
                                                             className="absolute top-1/2 left-2 transform -translate-y-1/2 bg-black/50 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition duration-200 cursor-grab z-20"
                                                             title="Перетащить"
                                                         >
@@ -2195,14 +2494,14 @@
                     <div className="px-4 sm:px-6 lg:px-8 py-8">
                         <div className="flex justify-between items-center mb-8 border-b pb-2">
                             <h2 className="text-3xl font-extrabold text-gray-900">Все альбомы</h2>
-                            
+
                             {/* Кнопка сортировки альбомов */}
                             {isAdmin && visibleAlbums.length > 1 && (
-                                <button 
+                                <button
                                     onClick={toggleAlbumReorderMode}
                                     className={`flex items-center px-3 py-1.5 text-sm font-medium rounded-lg transition ${
-                                        isAlbumReorderMode 
-                                            ? 'bg-indigo-600 text-white shadow-lg ring-2 ring-offset-1 ring-indigo-500' 
+                                        isAlbumReorderMode
+                                            ? 'bg-indigo-600 text-white shadow-lg ring-2 ring-offset-1 ring-indigo-500'
                                             : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
                                     }`}
                                 >
@@ -2211,7 +2510,7 @@
                                 </button>
                             )}
                         </div>
-                        
+
                         {visibleAlbums.length === 0 ? (
                             <div className="text-center py-20 bg-white rounded-xl border border-dashed border-gray-300">
                                 <ImageIcon className="w-12 h-12 text-gray-400 mx-auto" />
@@ -2251,7 +2550,7 @@
                     </div>
                 );
             }
-            
+
             if (!authReady || (loading && !error)) {
                 return <LoadingSpinner />;
             }
@@ -2278,8 +2577,8 @@
 
                                 {currentView === 'album' && selectedAlbum && (
                                     <div className="ml-4 pl-4 border-l border-gray-200 flex items-center flex-wrap">
-                                        <button 
-                                            onClick={handleGoHome} 
+                                        <button
+                                            onClick={handleGoHome}
                                             className="text-indigo-600 hover:text-indigo-800 transition text-sm font-medium"
                                             aria-label="Вернуться к альбомам"
                                         >
@@ -2291,14 +2590,15 @@
                                     </div>
                                 )}
                             </div>
-                            
+
                             <div className="flex items-center space-x-3">
+                                {/* Кнопки, которые видны только внутри альбома */}
                                 {isAdmin && currentView === 'album' && selectedAlbum && (
                                     <>
                                         <button
                                             onClick={toggleDeleteMode}
-                                            className={`p-2 rounded-full transition shadow-md ${isDeleteMode 
-                                                ? 'bg-red-500 text-white hover:bg-red-600' 
+                                            className={`p-2 rounded-full transition shadow-md ${isDeleteMode
+                                                ? 'bg-red-500 text-white hover:bg-red-600'
                                                 : 'bg-white text-gray-700 hover:bg-gray-100'}`}
                                             title="Включить/Выключить режим удаления"
                                             aria-pressed={isDeleteMode}
@@ -2308,15 +2608,15 @@
 
                                         <button
                                             onClick={toggleReorderMode}
-                                            className={`p-2 rounded-full transition shadow-md ${isReorderMode 
-                                                ? 'bg-indigo-500 text-white hover:bg-indigo-600' 
+                                            className={`p-2 rounded-full transition shadow-md ${isReorderMode
+                                                ? 'bg-indigo-500 text-white hover:bg-indigo-600'
                                                 : 'bg-white text-gray-700 hover:bg-gray-100'}`}
                                             title="Включить/Выключить режим изменения порядка"
                                             aria-pressed={isReorderMode}
                                         >
                                             <ArrowUpDown className="h-5 w-5" />
                                         </button>
-                                        
+
                                         <button
                                             onClick={handleOpenAddDividerModal}
                                             className="p-2 border border-gray-300 text-sm font-medium rounded-full text-gray-700 bg-white hover:bg-gray-100 transition shadow-sm"
@@ -2325,11 +2625,7 @@
                                         >
                                             <Pencil className="h-5 w-5" />
                                         </button>
-                                    </>
-                                )}
 
-                                {isAdmin && (
-                                    <>
                                         <button
                                             onClick={handleOpenAddPhotoModal}
                                             className="flex items-center p-2 border border-gray-300 text-sm font-medium rounded-full shadow-sm text-gray-700 bg-white hover:bg-gray-100 transition"
@@ -2338,16 +2634,49 @@
                                         >
                                             <ImageIcon className="h-5 w-5" />
                                         </button>
-                                        <button
-                                            onClick={handleOpenAddAlbumModal}
-                                            className="flex items-center p-2 border border-gray-300 text-sm font-medium rounded-full text-gray-700 bg-white hover:bg-gray-100 transition shadow-sm"
-                                            title="Создать альбом"
-                                        >
-                                            <Plus className="h-5 w-5" />
-                                        </button>
                                     </>
                                 )}
-                                
+
+                                {/* Кнопка создания альбома — только на главной */}
+                                {isAdmin && currentView === 'home' && (
+                                    <button
+                                        onClick={handleOpenAddAlbumModal}
+                                        className="flex items-center p-2 border border-gray-300 text-sm font-medium rounded-full text-gray-700 bg-white hover:bg-gray-100 transition shadow-sm"
+                                        title="Создать альбом"
+                                    >
+                                        <Plus className="h-5 w-5" />
+                                    </button>
+                                )}
+
+                                {/* Google авторизация для обычных пользователей */}
+                                {!isAdmin && (
+                                    <div className="flex items-center space-x-3">
+                                        {userProfile && !userProfile.isAnonymous ? (
+                                            <>
+                                                <div className="flex items-center space-x-2">
+                                                    {userProfile.photoURL && (
+                                                        <img src={userProfile.photoURL} alt="Аватар" className="w-8 h-8 rounded-full border-2 border-gray-200" />
+                                                    )}
+                                                    <span className="text-sm font-medium text-gray-700 hidden sm:inline-block">
+                                                        {userProfile.displayName}
+                                                    </span>
+                                                </div>
+                                                <button onClick={handleSignOut} className="p-2 text-gray-500 hover:text-red-600 transition" title="Выйти">
+                                                    <LogOut size={18} />
+                                                </button>
+                                            </>
+                                        ) : (
+                                            <button
+                                                onClick={handleGoogleSignIn}
+                                                className="flex items-center px-4 py-2 border border-blue-300 text-sm font-medium rounded-full text-blue-700 bg-blue-50 hover:bg-blue-100 transition shadow-sm"
+                                            >
+                                                <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24" fill="currentColor"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
+                                                Войти через Google
+                                            </button>
+                                        )}
+                                    </div>
+                                )}
+
                                 {!isAdmin && (
                                     <button
                                         onClick={handleOpenLoginModal}
@@ -2372,8 +2701,9 @@
                     <AddPhotoModal />
                     <AddDividerModal />
                     <DeleteAlbumConfirmModal />
-                    
-                    <ImageModal 
+
+                    <ImageModal
+                        key={enlargedImage?.timestamp || 'no-image'}
                         image={enlargedImage}
                         onClose={handleCloseImage}
                         onSaveCaption={updatePhotoCaption}
@@ -2381,11 +2711,18 @@
                         onNext={handleNextImage}
                         onPrev={handlePrevImage}
                         isAdmin={isAdmin}
+                        currentUserId={userId}
+                        userProfile={userProfile}
+                        onToggleLike={toggleLike}
+                        onAddComment={addComment}
+                        onDeleteComment={deleteComment}
+                        likes={enlargedImage?.likes || []}
+                        comments={enlargedImage?.comments || []}
                     />
                 </div>
             );
         };
-        
+
         const container = document.getElementById('root');
         const root = ReactDOM.createRoot(container);
         root.render(<App />);
