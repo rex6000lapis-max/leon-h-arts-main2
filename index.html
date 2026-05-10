@@ -807,9 +807,8 @@
                         if (user.isAnonymous) {
                             finalDisplayName = savedCustomName || 'Аноним';
                         } else {
-                            // Для Google-пользователей: если есть сохранённое кастомное имя, используем его
-                            // иначе берём displayName из Google, если он есть, иначе "Пользователь Google"
-                            const googleName = user.displayName;
+                            // Для Google-пользователей: используем displayName, если есть, иначе часть email, иначе "Пользователь Google"
+                            const googleName = user.displayName || (user.email ? user.email.split('@')[0] : null);
                             finalDisplayName = savedCustomName || googleName || 'Пользователь Google';
 
                             // Если имя пришло от Google и сохранённого имени ещё нет, сохраним его как дефолтное
@@ -896,12 +895,19 @@
                         try {
                             // Пытаемся привязать Google к анонимному аккаунту
                             await linkWithPopup(auth.currentUser, provider);
+                            // Принудительно обновляем профиль, чтобы гарантированно получить displayName
+                            if (auth.currentUser && !auth.currentUser.displayName) {
+                                await auth.currentUser.reload();
+                            }
                         } catch (linkError) {
                             // Если Google уже связан с другим пользователем
                             if (linkError.code === 'auth/credential-already-in-use') {
                                 console.log("Google аккаунт уже используется. Выполняем выход и вход заново.");
                                 await signOut(auth);               // выходим из анонимного
-                                await signInWithPopup(auth, provider); // входим через Google
+                                const result = await signInWithPopup(auth, provider); // входим через Google
+                                if (auth.currentUser && !auth.currentUser.displayName) {
+                                    await auth.currentUser.reload();
+                                }
                             } else {
                                 throw linkError;
                             }
@@ -911,7 +917,10 @@
                         if (auth.currentUser) {
                             await signOut(auth);
                         }
-                        await signInWithPopup(auth, provider);
+                        const result = await signInWithPopup(auth, provider);
+                        if (auth.currentUser && !auth.currentUser.displayName) {
+                            await auth.currentUser.reload();
+                        }
                     }
                 } catch (e) {
                     console.error("Ошибка входа через Google:", e);
@@ -1060,6 +1069,9 @@
 
                 const unsubscribe = onSnapshot(q,
                     (querySnapshot) => {
+                        // Очищаем любую предыдущую ошибку при успешной загрузке
+                        setError(null);
+
                         const fetchedAlbums = [];
                         querySnapshot.forEach((doc) => {
                             const data = doc.data();
@@ -1095,10 +1107,15 @@
                     },
                     (err) => {
                         console.error("Ошибка получения данных Firestore:", err);
-                        setError({
-                            name: "Ошибка Загрузки Альбомов",
-                            message: `Ошибка загрузки альбомов. Проверьте консоль. (${err.message})`
-                        });
+                        // Не показываем ошибку, если она связана с правами доступа – это временное явление при смене аккаунта
+                        if (err.message && err.message.includes('permission')) {
+                            console.warn("Временная ошибка прав доступа, данные будут загружены после авторизации.");
+                        } else {
+                            setError({
+                                name: "Ошибка Загрузки Альбомов",
+                                message: `Ошибка загрузки альбомов. Проверьте консоль. (${err.message})`
+                            });
+                        }
                         setLoading(false);
                     }
                 );
