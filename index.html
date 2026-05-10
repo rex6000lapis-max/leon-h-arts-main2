@@ -860,6 +860,7 @@
             }, [selectedAlbum, enlargedImage?.timestamp]);
 
             // --- ЛОГИКА АДМИНИСТРАТОРА (Login/Logout) ---
+            // === ИСПРАВЛЕННАЯ ФУНКЦИЯ ВХОДА ЧЕРЕЗ GOOGLE ===
             const handleGoogleSignIn = async () => {
                 if (!auth) {
                     alertUser('Ошибка', 'Firebase Auth не инициализирован.');
@@ -867,9 +868,27 @@
                 }
                 const provider = new GoogleAuthProvider();
                 try {
+                    // Если текущий пользователь — аноним
                     if (auth.currentUser && auth.currentUser.isAnonymous) {
-                        await linkWithPopup(auth.currentUser, provider);
+                        try {
+                            // Пытаемся привязать Google к анонимному аккаунту
+                            await linkWithPopup(auth.currentUser, provider);
+                            return;
+                        } catch (linkError) {
+                            // Если Google уже связан с другим пользователем
+                            if (linkError.code === 'auth/credential-already-in-use') {
+                                console.log("Google аккаунт уже используется. Выполняем выход и вход заново.");
+                                await signOut(auth);               // выходим из анонимного
+                                await signInWithPopup(auth, provider); // входим через Google
+                                return;
+                            }
+                            throw linkError;
+                        }
                     } else {
+                        // Если уже есть не-анонимный пользователь — выходим и заходим через Google
+                        if (auth.currentUser) {
+                            await signOut(auth);
+                        }
                         await signInWithPopup(auth, provider);
                     }
                 } catch (e) {
