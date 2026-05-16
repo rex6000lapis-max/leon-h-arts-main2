@@ -1573,6 +1573,7 @@
                 }
             };
 
+            // ========== ИСПРАВЛЕННАЯ ФУНКЦИЯ ДОБАВЛЕНИЯ ФОТО (удалён лишний saveScrollPosition) ==========
             const addPhotoLink = async (albumId, url, aspectRatio = 1.0) => {
                 if (!isAdmin) {
                     alertUser('Ошибка доступа', 'Вы должны быть Администратором для добавления фото.');
@@ -1583,9 +1584,8 @@
                     return;
                 }
 
-                // Сохраняем позицию перед добавлением
-                saveScrollPosition();
-
+                // ВАЖНО: НЕ вызываем saveScrollPosition() здесь, чтобы не сбивать механизм.
+                // Позиция уже сохранена в handleOpenAddPhotoModal, а восстановится в handleCloseAddPhotoModal.
                 try {
                     const collectionPath = `artifacts/${appId}/public/data/${PUBLIC_COLLECTION_NAME}`;
                     const albumRef = doc(db, collectionPath, albumId);
